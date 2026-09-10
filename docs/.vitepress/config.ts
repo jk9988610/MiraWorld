@@ -5,6 +5,7 @@ export default defineConfig({
   title: 'MiraWorld',
   titleTemplate: ':title · MiraWorld',
   description: '可探索的文字世界设定资料',
+  base: '/miraworld/',
   cleanUrls: true,
   themeConfig: {
     logo: undefined,

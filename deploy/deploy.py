@@ -17,10 +17,9 @@ import paramiko
 
 HOST = "8.133.252.224"
 USER = "admin"
-REMOTE_ROOT = "/var/www/miraworld"
+WEB_ROOT = "/var/www/html"
+REMOTE_ROOT = "/var/www/html/miraworld"
 REMOTE_TMP = "/tmp/miraworld-dist"
-NGINX_AVAILABLE = "/etc/nginx/sites-available/miraworld"
-NGINX_ENABLED = "/etc/nginx/sites-enabled/miraworld"
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "docs" / ".vitepress" / "dist"
@@ -47,17 +46,24 @@ def connect() -> paramiko.SSHClient:
         client.connect(**kwargs)
         return client
     except paramiko.AuthenticationException:
-        if not password:
-            password = getpass.getpass(f"SSH password for {USER}@{HOST}: ")
-        client.connect(
-            hostname=HOST,
-            username=USER,
-            password=password,
-            timeout=20,
-            allow_agent=False,
-            look_for_keys=False,
-        )
-        return client
+        try:
+            if not password:
+                password = getpass.getpass(f"SSH password for {USER}@{HOST}: ")
+            client.connect(
+                hostname=HOST,
+                username=USER,
+                password=password,
+                timeout=20,
+                allow_agent=False,
+                look_for_keys=False,
+            )
+            return client
+        except Exception:
+            client.close()
+            raise
+    except Exception:
+        client.close()
+        raise
 
 
 def run(client: paramiko.SSHClient, cmd: str, check: bool = True) -> str:
@@ -120,12 +126,35 @@ def main() -> int:
 
         setup = f"""
 set -e
+sudo mkdir -p /etc/nginx/snippets {REMOTE_ROOT}
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx
-sudo mkdir -p {REMOTE_ROOT}
-sudo cp /tmp/nginx-miraworld.conf {NGINX_AVAILABLE}
-sudo ln -sfn {NGINX_AVAILABLE} {NGINX_ENABLED}
-sudo rm -f /etc/nginx/sites-enabled/default
+sudo cp /tmp/nginx-miraworld.conf /etc/nginx/snippets/miraworld.conf
+DEFAULT_SITE=/etc/nginx/sites-enabled/default
+if [ ! -e "$DEFAULT_SITE" ]; then
+  DEFAULT_SITE=$(ls /etc/nginx/sites-enabled/* 2>/dev/null | head -n 1 || true)
+fi
+if [ -n "$DEFAULT_SITE" ] && ! grep -q 'snippets/miraworld.conf' "$DEFAULT_SITE"; then
+  sudo cp "$DEFAULT_SITE" "$DEFAULT_SITE.bak.miraworld"
+  sudo sed -i 's|^}}|    include /etc/nginx/snippets/miraworld.conf;\\n}}|' "$DEFAULT_SITE" || true
+  if ! grep -q 'snippets/miraworld.conf' "$DEFAULT_SITE"; then
+    sudo awk 'BEGIN{{c=0}} /^}}/{{c++}} {{print}} END{{}}' "$DEFAULT_SITE" >/dev/null
+    tmp=$(mktemp)
+    sudo awk '
+      {{ lines[NR]=$0 }}
+      END {{
+        for (i=1;i<=NR;i++) {{
+          if (i==NR && lines[i] ~ /^}}/) {{
+            print "    include /etc/nginx/snippets/miraworld.conf;"
+          }}
+          print lines[i]
+        }}
+      }}
+    ' "$DEFAULT_SITE" > "$tmp"
+    sudo cp "$tmp" "$DEFAULT_SITE"
+    rm -f "$tmp"
+  fi
+fi
 sudo find {REMOTE_ROOT} -mindepth 1 -delete
 sudo cp -a {REMOTE_TMP}/. {REMOTE_ROOT}/
 sudo chown -R www-data:www-data {REMOTE_ROOT}
@@ -133,10 +162,10 @@ sudo nginx -t
 sudo systemctl enable nginx
 sudo systemctl reload nginx
 echo DEPLOY_OK
-curl -sI http://127.0.0.1/ | head -n 8
+curl -sI http://127.0.0.1/miraworld/ | head -n 8
 """
         run(client, setup)
-        print(f"Done. Open http://{HOST}/")
+        print(f"Done. Open http://{HOST}/miraworld/")
         return 0
     finally:
         client.close()

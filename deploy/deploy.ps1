@@ -1,13 +1,12 @@
-# Deploy MiraWorld dist to admin@8.133.252.224
+# Deploy MiraWorld under /miraworld/ (keeps bykc at /)
 # Usage: .\deploy\deploy.ps1
-# Requires: SSH access (key authorized or interactive password)
 
 $ErrorActionPreference = "Stop"
 $HostName = "8.133.252.224"
 $User = "admin"
 $LocalDist = Join-Path $PSScriptRoot "..\docs\.vitepress\dist"
 $RemoteTmp = "/tmp/miraworld-dist"
-$RemoteRoot = "/var/www/miraworld"
+$RemoteRoot = "/var/www/html/miraworld"
 
 if (-not (Test-Path $LocalDist)) {
     Write-Error "Dist not found. Run: npm run docs:build"
@@ -29,7 +28,7 @@ sudo cp -a $RemoteTmp/. $RemoteRoot/
 sudo chown -R www-data:www-data $RemoteRoot
 sudo nginx -t && sudo systemctl reload nginx
 echo DEPLOY_OK
-curl -sI http://127.0.0.1/ | head -n 5
+curl -sI http://127.0.0.1/miraworld/ | head -n 5
 "@
 
-Write-Host "Done. Open http://${HostName}/"
+Write-Host "Done. Open http://${HostName}/miraworld/"
