@@ -135,26 +135,25 @@ if [ ! -e "$DEFAULT_SITE" ]; then
   DEFAULT_SITE=$(ls /etc/nginx/sites-enabled/* 2>/dev/null | head -n 1 || true)
 fi
 if [ -n "$DEFAULT_SITE" ] && ! grep -q 'snippets/miraworld.conf' "$DEFAULT_SITE"; then
-  sudo cp "$DEFAULT_SITE" "$DEFAULT_SITE.bak.miraworld"
-  sudo sed -i 's|^}}|    include /etc/nginx/snippets/miraworld.conf;\\n}}|' "$DEFAULT_SITE" || true
-  if ! grep -q 'snippets/miraworld.conf' "$DEFAULT_SITE"; then
-    sudo awk 'BEGIN{{c=0}} /^}}/{{c++}} {{print}} END{{}}' "$DEFAULT_SITE" >/dev/null
-    tmp=$(mktemp)
-    sudo awk '
-      {{ lines[NR]=$0 }}
-      END {{
-        for (i=1;i<=NR;i++) {{
-          if (i==NR && lines[i] ~ /^}}/) {{
-            print "    include /etc/nginx/snippets/miraworld.conf;"
-          }}
-          print lines[i]
+  sudo mkdir -p /etc/nginx/backup
+  sudo cp "$DEFAULT_SITE" "/etc/nginx/backup/$(basename "$DEFAULT_SITE").bak"
+  tmp=$(mktemp)
+  sudo awk '
+    {{ lines[NR]=$0 }}
+    END {{
+      for (i=1;i<=NR;i++) {{
+        if (i==NR && lines[i] ~ /^}}/) {{
+          print "    include /etc/nginx/snippets/miraworld.conf;"
         }}
+        print lines[i]
       }}
-    ' "$DEFAULT_SITE" > "$tmp"
-    sudo cp "$tmp" "$DEFAULT_SITE"
-    rm -f "$tmp"
-  fi
+    }}
+  ' "$DEFAULT_SITE" > "$tmp"
+  sudo cp "$tmp" "$DEFAULT_SITE"
+  rm -f "$tmp"
 fi
+sudo mkdir -p /etc/nginx/backup
+sudo mv /etc/nginx/sites-enabled/*.bak* /etc/nginx/backup/ 2>/dev/null || true
 sudo find {REMOTE_ROOT} -mindepth 1 -delete
 sudo cp -a {REMOTE_TMP}/. {REMOTE_ROOT}/
 sudo chown -R www-data:www-data {REMOTE_ROOT}
