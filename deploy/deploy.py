@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Deploy MiraWorld VitePress dist to admin@8.133.252.224 via SSH.
 
-Auth: prefers existing SSH keys; falls back to password from
-MIRAWORLD_SSH_PASSWORD env, or interactive getpass.
+Auth: uses jk9988610.pem only — from MIRAWORLD_SSH_PRIVATE_KEY (Cursor Secret)
+or ~/.ssh/jk9988610.pem. Password fallback via MIRAWORLD_SSH_PASSWORD.
 """
 from __future__ import annotations
 
 import getpass
 import os
 import posixpath
-import stat
 import sys
 from pathlib import Path
 
@@ -17,6 +16,8 @@ import paramiko
 
 HOST = "8.133.252.224"
 USER = "admin"
+SSH_KEY_NAME = "jk9988610.pem"
+SSH_KEY_ENV = "MIRAWORLD_SSH_PRIVATE_KEY"
 REMOTE_ROOT = "/var/www/html/miraworld"
 REMOTE_TMP = "/tmp/miraworld-dist"
 
@@ -26,33 +27,36 @@ NGINX_CONF = ROOT / "deploy" / "nginx-miraworld.conf"
 SETUP_NGINX = ROOT / "deploy" / "setup-nginx.sh"
 
 
+def resolve_ssh_key_path() -> Path | None:
+    """Return path to jk9988610.pem, materializing from Cursor Secret if needed."""
+    ssh_dir = Path.home() / ".ssh"
+    key_path = ssh_dir / SSH_KEY_NAME
+    pem = os.environ.get(SSH_KEY_ENV, "").strip()
+    if pem:
+        ssh_dir.mkdir(mode=0o700, exist_ok=True)
+        if not pem.endswith("\n"):
+            pem += "\n"
+        key_path.write_text(pem, encoding="utf-8")
+        key_path.chmod(0o600)
+        return key_path
+    if key_path.is_file():
+        return key_path
+    return None
+
+
 def connect() -> paramiko.SSHClient:
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    key_path = Path.home() / ".ssh" / "id_ed25519"
+    key_path = resolve_ssh_key_path()
     password = os.environ.get("MIRAWORLD_SSH_PASSWORD")
 
-    kwargs = {
-        "hostname": HOST,
-        "username": USER,
-        "timeout": 20,
-        "allow_agent": True,
-        "look_for_keys": True,
-    }
-    if key_path.exists():
-        kwargs["key_filename"] = str(key_path)
-
-    try:
-        client.connect(**kwargs)
-        return client
-    except paramiko.AuthenticationException:
+    if key_path:
+        print(f"SSH key: {key_path}")
         try:
-            if not password:
-                password = getpass.getpass(f"SSH password for {USER}@{HOST}: ")
             client.connect(
                 hostname=HOST,
                 username=USER,
-                password=password,
+                key_filename=str(key_path),
                 timeout=20,
                 allow_agent=False,
                 look_for_keys=False,
@@ -61,6 +65,19 @@ def connect() -> paramiko.SSHClient:
         except Exception:
             client.close()
             raise
+
+    if not password:
+        password = getpass.getpass(f"SSH password for {USER}@{HOST}: ")
+    try:
+        client.connect(
+            hostname=HOST,
+            username=USER,
+            password=password,
+            timeout=20,
+            allow_agent=False,
+            look_for_keys=False,
+        )
+        return client
     except Exception:
         client.close()
         raise
