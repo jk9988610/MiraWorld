@@ -4,8 +4,7 @@
 Auth priority:
 1. MIRAWORLD_SSH_PRIVATE_KEY env (PEM/OpenSSH private key text)
 2. MIRAWORLD_SSH_KEY_PATH or ~/.ssh/jk9988610.pem
-3. ~/.ssh/id_ed25519
-4. MIRAWORLD_SSH_PASSWORD / interactive getpass
+3. MIRAWORLD_SSH_PASSWORD / interactive getpass
 """
 from __future__ import annotations
 
@@ -20,6 +19,8 @@ import paramiko
 
 HOST = "8.133.252.224"
 USER = "admin"
+SSH_KEY_NAME = "jk9988610.pem"
+SSH_KEY_ENV = "MIRAWORLD_SSH_PRIVATE_KEY"
 REMOTE_ROOT = "/var/www/html/miraworld"
 REMOTE_TMP = "/tmp/miraworld-dist"
 
@@ -34,8 +35,7 @@ def _resolve_key_path() -> Path | None:
     candidates = []
     if env_path:
         candidates.append(Path(env_path).expanduser())
-    candidates.append(Path.home() / ".ssh" / "jk9988610.pem")
-    candidates.append(Path.home() / ".ssh" / "id_ed25519")
+    candidates.append(Path.home() / ".ssh" / SSH_KEY_NAME)
     for p in candidates:
         if p.is_file():
             return p
@@ -44,7 +44,7 @@ def _resolve_key_path() -> Path | None:
 
 def _materialize_env_key() -> tuple[Path | None, Path | None]:
     """Write MIRAWORLD_SSH_PRIVATE_KEY to a temp file. Returns (path, cleanup_path)."""
-    raw = os.environ.get("MIRAWORLD_SSH_PRIVATE_KEY", "").strip()
+    raw = os.environ.get(SSH_KEY_ENV, "").strip()
     if not raw:
         return None, None
     # Normalize escaped newlines from some secret UIs
@@ -79,18 +79,19 @@ def connect() -> paramiko.SSHClient:
         "hostname": HOST,
         "username": USER,
         "timeout": 20,
-        "allow_agent": True,
-        "look_for_keys": True,
+        "allow_agent": False,
+        "look_for_keys": False,
     }
     if key_path is not None:
+        print(f"SSH key: {key_path}")
         kwargs["key_filename"] = str(key_path)
-        kwargs["look_for_keys"] = False
-        kwargs["allow_agent"] = False
 
     try:
         try:
-            client.connect(**kwargs)
-            return client
+            if key_path is not None:
+                client.connect(**kwargs)
+                return client
+            raise paramiko.AuthenticationException("no key")
         except paramiko.AuthenticationException:
             try:
                 if not password:
