@@ -23,6 +23,7 @@ REMOTE_TMP = "/tmp/miraworld-dist"
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "docs" / ".vitepress" / "dist"
 NGINX_CONF = ROOT / "deploy" / "nginx-miraworld.conf"
+SETUP_NGINX = ROOT / "deploy" / "setup-nginx.sh"
 
 
 def connect() -> paramiko.SSHClient:
@@ -120,22 +121,20 @@ def main() -> int:
             print(f"Uploading {DIST} -> {REMOTE_TMP}")
             upload_dir(sftp, DIST, REMOTE_TMP)
             sftp.put(str(NGINX_CONF), "/tmp/nginx-miraworld.conf")
+            sftp.put(str(SETUP_NGINX), "/tmp/setup-nginx.sh")
         finally:
             sftp.close()
 
+        # setup-nginx.sh copies the snippet AND patches bykc/default to include it.
         setup = f"""
 set -e
-sudo mkdir -p /etc/nginx/snippets /etc/nginx/backup {REMOTE_ROOT}
-sudo apt-get update -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx
-sudo cp /tmp/nginx-miraworld.conf /etc/nginx/snippets/miraworld.conf
-sudo rm -f /etc/nginx/sites-enabled/miraworld
-sudo mv /etc/nginx/sites-enabled/*.bak* /etc/nginx/backup/ 2>/dev/null || true
+chmod +x /tmp/setup-nginx.sh
+sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
+sudo mkdir -p {REMOTE_ROOT}
 sudo find {REMOTE_ROOT} -mindepth 1 -delete
 sudo cp -a {REMOTE_TMP}/. {REMOTE_ROOT}/
 sudo chown -R www-data:www-data {REMOTE_ROOT}
 sudo nginx -t
-sudo systemctl enable nginx
 sudo systemctl reload nginx
 echo DEPLOY_OK
 curl -sI http://127.0.0.1/miraworld/ | head -n 8
