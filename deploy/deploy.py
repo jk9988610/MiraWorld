@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """Deploy MiraWorld VitePress dist to admin@8.133.252.224 via SSH.
 
-Auth: prefers existing SSH keys; falls back to password from
-MIRAWORLD_SSH_PASSWORD env, or interactive getpass.
+Auth priority:
+1. MIRAWORLD_SSH_PRIVATE_KEY env (PEM/OpenSSH private key text)
+2. MIRAWORLD_SSH_KEY_PATH or ~/.ssh/jk9988610.pem
+3. ~/.ssh/id_ed25519
+4. MIRAWORLD_SSH_PASSWORD / interactive getpass
 """
 from __future__ import annotations
 
 import getpass
 import os
 import posixpath
-import stat
 import sys
+import tempfile
 from pathlib import Path
 
 import paramiko
@@ -26,11 +29,51 @@ NGINX_CONF = ROOT / "deploy" / "nginx-miraworld.conf"
 SETUP_NGINX = ROOT / "deploy" / "setup-nginx.sh"
 
 
+def _resolve_key_path() -> Path | None:
+    env_path = os.environ.get("MIRAWORLD_SSH_KEY_PATH", "").strip()
+    candidates = []
+    if env_path:
+        candidates.append(Path(env_path).expanduser())
+    candidates.append(Path.home() / ".ssh" / "jk9988610.pem")
+    candidates.append(Path.home() / ".ssh" / "id_ed25519")
+    for p in candidates:
+        if p.is_file():
+            return p
+    return None
+
+
+def _materialize_env_key() -> tuple[Path | None, Path | None]:
+    """Write MIRAWORLD_SSH_PRIVATE_KEY to a temp file. Returns (path, cleanup_path)."""
+    raw = os.environ.get("MIRAWORLD_SSH_PRIVATE_KEY", "").strip()
+    if not raw:
+        return None, None
+    # Normalize escaped newlines from some secret UIs
+    if "\\n" in raw and "\n" not in raw:
+        raw = raw.replace("\\n", "\n")
+    if not raw.endswith("\n"):
+        raw += "\n"
+    fd, name = tempfile.mkstemp(prefix="miraworld_ssh_", suffix=".pem")
+    path = Path(name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+            f.write(raw)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+        return path, path
+    except Exception:
+        path.unlink(missing_ok=True)
+        raise
+
+
 def connect() -> paramiko.SSHClient:
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    key_path = Path.home() / ".ssh" / "id_ed25519"
     password = os.environ.get("MIRAWORLD_SSH_PASSWORD")
+
+    env_key_path, cleanup = _materialize_env_key()
+    key_path = env_key_path or _resolve_key_path()
 
     kwargs = {
         "hostname": HOST,
@@ -39,31 +82,37 @@ def connect() -> paramiko.SSHClient:
         "allow_agent": True,
         "look_for_keys": True,
     }
-    if key_path.exists():
+    if key_path is not None:
         kwargs["key_filename"] = str(key_path)
+        kwargs["look_for_keys"] = False
+        kwargs["allow_agent"] = False
 
     try:
-        client.connect(**kwargs)
-        return client
-    except paramiko.AuthenticationException:
         try:
-            if not password:
-                password = getpass.getpass(f"SSH password for {USER}@{HOST}: ")
-            client.connect(
-                hostname=HOST,
-                username=USER,
-                password=password,
-                timeout=20,
-                allow_agent=False,
-                look_for_keys=False,
-            )
+            client.connect(**kwargs)
             return client
+        except paramiko.AuthenticationException:
+            try:
+                if not password:
+                    password = getpass.getpass(f"SSH password for {USER}@{HOST}: ")
+                client.connect(
+                    hostname=HOST,
+                    username=USER,
+                    password=password,
+                    timeout=20,
+                    allow_agent=False,
+                    look_for_keys=False,
+                )
+                return client
+            except Exception:
+                client.close()
+                raise
         except Exception:
             client.close()
             raise
-    except Exception:
-        client.close()
-        raise
+    finally:
+        if cleanup is not None:
+            cleanup.unlink(missing_ok=True)
 
 
 def run(client: paramiko.SSHClient, cmd: str, check: bool = True) -> str:
