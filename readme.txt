@@ -8,6 +8,11 @@ npm install
 npm run docs:dev
 npm run docs:build
 
+--- Cloud Agent SSH（jk9988610.pem）---
+Cursor → Cloud Agents → Environment → Secrets:
+  MIRAWORLD_SSH_PRIVATE_KEY = jk9988610.pem 完整内容
+新开的 Agent 会话才会注入；deploy.py 只使用该密钥。
+
 --- 部署到 IP 子路径 /miraworld/ ---
 阿里云网页终端:
   curl -fsSL https://github.com/jk9988610/MiraWorld/releases/download/miraworld-web/bootstrap-on-server.sh | sed 's/\r$//' | bash
