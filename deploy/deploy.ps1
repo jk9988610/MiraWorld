@@ -1,4 +1,4 @@
-# Deploy MiraWorld under /miraworld/ (keeps bykc at /)
+# Deploy MiraWorld under /miraworld/ on the IP site
 # Usage: .\deploy\deploy.ps1
 
 $ErrorActionPreference = "Stop"

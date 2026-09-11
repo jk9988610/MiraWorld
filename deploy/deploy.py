@@ -17,7 +17,6 @@ import paramiko
 
 HOST = "8.133.252.224"
 USER = "admin"
-WEB_ROOT = "/var/www/html"
 REMOTE_ROOT = "/var/www/html/miraworld"
 REMOTE_TMP = "/tmp/miraworld-dist"
 
@@ -126,33 +125,11 @@ def main() -> int:
 
         setup = f"""
 set -e
-sudo mkdir -p /etc/nginx/snippets {REMOTE_ROOT}
+sudo mkdir -p /etc/nginx/snippets /etc/nginx/backup {REMOTE_ROOT}
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y nginx
 sudo cp /tmp/nginx-miraworld.conf /etc/nginx/snippets/miraworld.conf
-DEFAULT_SITE=/etc/nginx/sites-enabled/default
-if [ ! -e "$DEFAULT_SITE" ]; then
-  DEFAULT_SITE=$(ls /etc/nginx/sites-enabled/* 2>/dev/null | head -n 1 || true)
-fi
-if [ -n "$DEFAULT_SITE" ] && ! grep -q 'snippets/miraworld.conf' "$DEFAULT_SITE"; then
-  sudo mkdir -p /etc/nginx/backup
-  sudo cp "$DEFAULT_SITE" "/etc/nginx/backup/$(basename "$DEFAULT_SITE").bak"
-  tmp=$(mktemp)
-  sudo awk '
-    {{ lines[NR]=$0 }}
-    END {{
-      for (i=1;i<=NR;i++) {{
-        if (i==NR && lines[i] ~ /^}}/) {{
-          print "    include /etc/nginx/snippets/miraworld.conf;"
-        }}
-        print lines[i]
-      }}
-    }}
-  ' "$DEFAULT_SITE" > "$tmp"
-  sudo cp "$tmp" "$DEFAULT_SITE"
-  rm -f "$tmp"
-fi
-sudo mkdir -p /etc/nginx/backup
+sudo rm -f /etc/nginx/sites-enabled/miraworld
 sudo mv /etc/nginx/sites-enabled/*.bak* /etc/nginx/backup/ 2>/dev/null || true
 sudo find {REMOTE_ROOT} -mindepth 1 -delete
 sudo cp -a {REMOTE_TMP}/. {REMOTE_ROOT}/

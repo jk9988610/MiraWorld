@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install MiraWorld under http://<host>/miraworld/ — keeps bykc homepage at /
+# Deploy MiraWorld at http://<ip>/miraworld/ — keeps bykc homepage at /
 set -euo pipefail
 
 DIST_URL="${DIST_URL:-https://github.com/jk9988610/MiraWorld/releases/download/miraworld-web/miraworld-dist.tar.gz}"
@@ -26,21 +26,21 @@ location ^~ /miraworld/ {
 }
 EOF
 
-# Backups must NOT live in sites-enabled (nginx loads every file there).
-sudo mkdir -p "$BACKUP_DIR"
+# Remove domain-only site if present (ignore domain for now)
+sudo rm -f /etc/nginx/sites-enabled/miraworld
+
+# Move stray backups out of sites-enabled
 shopt -s nullglob
 for f in /etc/nginx/sites-enabled/*.bak* /etc/nginx/sites-enabled/*~; do
-  echo "Moving stray backup out of sites-enabled: $f"
   sudo mv "$f" "$BACKUP_DIR/"
 done
 shopt -u nullglob
 
-# Prefer bykc / default; skip backup-looking names
 DEFAULT_SITE=""
 for f in /etc/nginx/sites-enabled/bykc /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/*; do
   base=$(basename "$f")
   case "$base" in
-    *.bak*|*.bak|*.old|*~) continue ;;
+    miraworld|*.bak*|*.bak|*.old|*~) continue ;;
   esac
   if [ -f "$f" ] || [ -L "$f" ]; then
     DEFAULT_SITE="$f"
@@ -53,24 +53,32 @@ if [ -z "$DEFAULT_SITE" ]; then
   exit 1
 fi
 
-if ! grep -q 'snippets/miraworld.conf' "$DEFAULT_SITE"; then
-  sudo cp "$DEFAULT_SITE" "$BACKUP_DIR/$(basename "$DEFAULT_SITE").$(date +%Y%m%d%H%M%S).bak"
-  sudo python3 - <<PY
+# Ensure bykc/default includes miraworld snippet (replace old redirect include if any)
+sudo python3 - <<PY
 from pathlib import Path
-p = Path("$DEFAULT_SITE")
-# Follow symlink to real file for editing
-real = Path(p).resolve()
-text = real.read_text(encoding="utf-8")
-inc = "    include /etc/nginx/snippets/miraworld.conf;\n"
-if "snippets/miraworld.conf" in text:
-    raise SystemExit(0)
-idx = text.rfind("}")
-if idx < 0:
-    raise SystemExit("cannot find closing brace in " + str(real))
-real.write_text(text[:idx] + inc + text[idx:], encoding="utf-8")
-print("patched", real)
+p = Path("$DEFAULT_SITE").resolve()
+text = p.read_text(encoding="utf-8")
+wanted = "include /etc/nginx/snippets/miraworld.conf;"
+old_redir = "include /etc/nginx/snippets/miraworld-ip-redirect.conf;"
+changed = False
+if old_redir in text:
+    text = text.replace(old_redir, wanted)
+    changed = True
+if wanted not in text:
+    idx = text.rfind("}")
+    if idx < 0:
+        raise SystemExit("cannot find closing brace")
+    text = text[:idx] + "    " + wanted + "\n" + text[idx:]
+    changed = True
+if changed:
+    Path("$BACKUP_DIR").mkdir(parents=True, exist_ok=True)
+    bak = Path("$BACKUP_DIR") / (p.name + ".ipfix.bak")
+    bak.write_text(p.read_text(encoding="utf-8"), encoding="utf-8")
+    p.write_text(text, encoding="utf-8")
+    print("patched", p)
+else:
+    print("include already present", p)
 PY
-fi
 
 sudo find "$SITE_ROOT" -mindepth 1 -delete
 sudo tar -xzf /tmp/miraworld-dist.tar.gz -C "$SITE_ROOT"
@@ -78,5 +86,5 @@ sudo chown -R www-data:www-data "$SITE_ROOT"
 sudo nginx -t
 sudo systemctl enable nginx
 sudo systemctl reload nginx
-echo "bykc home: http://$(curl -fsS ifconfig.me)/"
-echo "MiraWorld:  http://$(curl -fsS ifconfig.me)/miraworld/"
+echo "bykc:      http://$(curl -fsS ifconfig.me)/"
+echo "MiraWorld: http://$(curl -fsS ifconfig.me)/miraworld/"
