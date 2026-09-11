@@ -125,17 +125,15 @@ def main() -> int:
         finally:
             sftp.close()
 
-        # setup-nginx.sh copies the snippet AND patches bykc/default to include it.
+        # Copy site files BEFORE setup-nginx.sh reloads nginx (avoids /miraworld/ 404 race).
         setup = f"""
 set -e
-chmod +x /tmp/setup-nginx.sh
-sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
 sudo mkdir -p {REMOTE_ROOT}
 sudo find {REMOTE_ROOT} -mindepth 1 -delete
 sudo cp -a {REMOTE_TMP}/. {REMOTE_ROOT}/
 sudo chown -R www-data:www-data {REMOTE_ROOT}
-sudo nginx -t
-sudo systemctl reload nginx
+chmod +x /tmp/setup-nginx.sh
+sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
 echo DEPLOY_OK
 curl -sI http://127.0.0.1/miraworld/ | head -n 8
 """

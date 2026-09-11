@@ -20,13 +20,13 @@ scp (Join-Path $PSScriptRoot "setup-nginx.sh") "${User}@${HostName}:/tmp/setup-n
 
 ssh "${User}@${HostName}" @"
 set -e
-chmod +x /tmp/setup-nginx.sh
-sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
+# Copy site files BEFORE setup-nginx.sh reloads nginx (avoids /miraworld/ 404 race).
 sudo mkdir -p $RemoteRoot
 sudo find $RemoteRoot -mindepth 1 -delete
 sudo cp -a $RemoteTmp/. $RemoteRoot/
 sudo chown -R www-data:www-data $RemoteRoot
-sudo nginx -t && sudo systemctl reload nginx
+chmod +x /tmp/setup-nginx.sh
+sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
 echo DEPLOY_OK
 curl -sI http://127.0.0.1/miraworld/ | head -n 5
 "@
