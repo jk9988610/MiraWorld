@@ -30,6 +30,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "docs" / ".vitepress" / "dist"
 NGINX_CONF = ROOT / "deploy" / "nginx-miraworld.conf"
 SETUP_NGINX = ROOT / "deploy" / "setup-nginx.sh"
+SERVER_DIR = ROOT / "server"
+SETUP_AUTH = ROOT / "deploy" / "setup-auth.sh"
+AUTH_SERVICE = ROOT / "deploy" / "miraworld-auth.service"
+REMOTE_AUTH_SRC = "/tmp/miraworld-auth-src"
 
 
 def _resolve_key_path() -> Path | None:
@@ -181,10 +185,34 @@ def main() -> int:
         try:
             print(f"Uploading {DIST} -> {remote_tmp}")
             upload_dir(sftp, DIST, remote_tmp)
+            upload_dir(sftp, SERVER_DIR, REMOTE_AUTH_SRC)
             sftp.put(str(NGINX_CONF), "/tmp/nginx-miraworld.conf")
             sftp.put(str(SETUP_NGINX), "/tmp/setup-nginx.sh")
+            sftp.put(str(SETUP_AUTH), "/tmp/setup-auth.sh")
+            sftp.put(str(AUTH_SERVICE), "/tmp/miraworld-auth.service")
+            jwt_secret = os.environ.get("MIRAWORLD_JWT_SECRET", "").strip()
+            if jwt_secret:
+                fd, auth_env_path = tempfile.mkstemp(prefix="miraworld_auth_", suffix=".env")
+                try:
+                    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
+                        f.write(
+                            "MIRAWORLD_ENV=production\n"
+                            "MIRAWORLD_AUTH_DB=/var/lib/miraworld/auth.db\n"
+                            f"MIRAWORLD_JWT_SECRET={jwt_secret}\n"
+                        )
+                    sftp.put(auth_env_path, "/tmp/miraworld-auth.env")
+                finally:
+                    Path(auth_env_path).unlink(missing_ok=True)
         finally:
             sftp.close()
+
+        auth_env_copy = ""
+        if os.environ.get("MIRAWORLD_JWT_SECRET", "").strip():
+            auth_env_copy = """
+sudo mkdir -p /etc/miraworld
+sudo cp /tmp/miraworld-auth.env /etc/miraworld/auth.env
+sudo chmod 600 /etc/miraworld/auth.env
+"""
 
         # Copy site files BEFORE setup-nginx.sh reloads nginx (avoids /miraworld/ 404 race).
         setup = f"""
@@ -195,9 +223,13 @@ sudo cp -a {remote_tmp}/. {REMOTE_ROOT}/
 sudo rm -rf {remote_tmp}
 sudo chown -R www-data:www-data {REMOTE_ROOT}
 chmod +x /tmp/setup-nginx.sh
+chmod +x /tmp/setup-auth.sh
+{auth_env_copy}
+sudo bash /tmp/setup-auth.sh
 sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
 echo DEPLOY_OK
 curl -sI http://127.0.0.1/miraworld/ | head -n 8
+curl -s http://127.0.0.1/miraworld/api/health
 """
         run(client, setup)
         print(f"Done. Open http://{HOST}/miraworld/")
