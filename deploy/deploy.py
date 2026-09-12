@@ -8,11 +8,13 @@ Auth priority:
 """
 from __future__ import annotations
 
+import errno
 import getpass
 import os
 import posixpath
 import sys
 import tempfile
+import uuid
 from pathlib import Path
 
 import paramiko
@@ -22,7 +24,7 @@ USER = "admin"
 SSH_KEY_NAME = "jk9988610.pem"
 SSH_KEY_ENV = "MIRAWORLD_SSH_PRIVATE_KEY"
 REMOTE_ROOT = "/var/www/html/miraworld"
-REMOTE_TMP = "/tmp/miraworld-dist"
+REMOTE_TMP_PREFIX = "/tmp/miraworld-dist"
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "docs" / ".vitepress" / "dist"
@@ -131,6 +133,10 @@ def run(client: paramiko.SSHClient, cmd: str, check: bool = True) -> str:
     return out
 
 
+def _sftp_missing(exc: BaseException) -> bool:
+    return isinstance(exc, OSError) and exc.errno in (errno.ENOENT, errno.ENOTDIR)
+
+
 def sftp_mkdirs(sftp: paramiko.SFTPClient, remote: str) -> None:
     parts = remote.strip("/").split("/")
     cur = ""
@@ -138,7 +144,9 @@ def sftp_mkdirs(sftp: paramiko.SFTPClient, remote: str) -> None:
         cur = f"{cur}/{p}"
         try:
             sftp.stat(cur)
-        except FileNotFoundError:
+        except OSError as exc:
+            if not _sftp_missing(exc):
+                raise
             sftp.mkdir(cur)
 
 
@@ -150,7 +158,9 @@ def upload_dir(sftp: paramiko.SFTPClient, local: Path, remote: str) -> None:
         if path.is_dir():
             try:
                 sftp.stat(target)
-            except FileNotFoundError:
+            except OSError as exc:
+                if not _sftp_missing(exc):
+                    raise
                 sftp.mkdir(target)
         else:
             sftp_mkdirs(sftp, posixpath.dirname(target))
@@ -162,14 +172,15 @@ def main() -> int:
         print("Dist missing. Run: npm run docs:build", file=sys.stderr)
         return 1
 
+    remote_tmp = f"{REMOTE_TMP_PREFIX}-{uuid.uuid4().hex[:8]}"
     print(f"Connecting to {USER}@{HOST} ...")
     client = connect()
     try:
-        run(client, f"rm -rf {REMOTE_TMP} && mkdir -p {REMOTE_TMP}")
+        run(client, f"mkdir -p {remote_tmp}")
         sftp = client.open_sftp()
         try:
-            print(f"Uploading {DIST} -> {REMOTE_TMP}")
-            upload_dir(sftp, DIST, REMOTE_TMP)
+            print(f"Uploading {DIST} -> {remote_tmp}")
+            upload_dir(sftp, DIST, remote_tmp)
             sftp.put(str(NGINX_CONF), "/tmp/nginx-miraworld.conf")
             sftp.put(str(SETUP_NGINX), "/tmp/setup-nginx.sh")
         finally:
@@ -180,7 +191,8 @@ def main() -> int:
 set -e
 sudo mkdir -p {REMOTE_ROOT}
 sudo find {REMOTE_ROOT} -mindepth 1 -delete
-sudo cp -a {REMOTE_TMP}/. {REMOTE_ROOT}/
+sudo cp -a {remote_tmp}/. {REMOTE_ROOT}/
+sudo rm -rf {remote_tmp}
 sudo chown -R www-data:www-data {REMOTE_ROOT}
 chmod +x /tmp/setup-nginx.sh
 sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
