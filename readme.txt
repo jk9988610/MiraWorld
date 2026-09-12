@@ -27,3 +27,7 @@ Cursor → Cloud Agents → Environment → Secrets:
 访问:
   bykc:      http://8.133.252.224/
   MiraWorld: http://8.133.252.224/miraworld/
+
+--- 运维文档（仓库内）---
+  docs/ops/server-capacity-and-orders.md  压测、内存、缓存、下单容量估算
+  站点侧栏「运维」栏目（部署后: /miraworld/ops/）

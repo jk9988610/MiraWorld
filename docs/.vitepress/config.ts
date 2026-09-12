@@ -68,6 +68,13 @@ export default defineConfig({
           { text: '术语表', link: '/reference/glossary' },
         ],
       },
+      {
+        text: '运维',
+        items: [
+          { text: '运维总览', link: '/ops/' },
+          { text: '服务器容量与下单', link: '/ops/server-capacity-and-orders' },
+        ],
+      },
     ],
     outline: {
       level: [2, 3],
