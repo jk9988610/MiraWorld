@@ -138,7 +138,9 @@ def sftp_mkdirs(sftp: paramiko.SFTPClient, remote: str) -> None:
         cur = f"{cur}/{p}"
         try:
             sftp.stat(cur)
-        except FileNotFoundError:
+        except OSError as e:
+            if getattr(e, "errno", None) != 2:
+                raise
             sftp.mkdir(cur)
 
 
@@ -154,7 +156,7 @@ def upload_dir(sftp: paramiko.SFTPClient, local: Path, remote: str) -> None:
                 sftp.mkdir(target)
         else:
             sftp_mkdirs(sftp, posixpath.dirname(target))
-            sftp.put(str(path), target)
+            sftp.put(str(path), target, confirm=False)
 
 
 def main() -> int:

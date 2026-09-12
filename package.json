@@ -7,7 +7,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "deploy": "npm run docs:build && python deploy/deploy.py"
+    "deploy": "npm run docs:build && python3 deploy/deploy.py"
   },
   "devDependencies": {
     "vitepress": "^1.6.3"
