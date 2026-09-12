@@ -49,11 +49,17 @@ if old_redir in text:
     text = text.replace(old_redir, wanted)
     changed = True
 if wanted not in text:
-    idx = text.rfind("}")
-    if idx < 0:
-        raise SystemExit("cannot find closing brace")
-    text = text[:idx] + "    " + wanted + "\n" + text[idx:]
-    changed = True
+    marker = "server_name _;"
+    insert = marker + "\n\n    " + wanted
+    if marker in text:
+        text = text.replace(marker, insert, 1)
+        changed = True
+    else:
+        idx = text.rfind("}")
+        if idx < 0:
+            raise SystemExit("cannot find closing brace")
+        text = text[:idx] + "    " + wanted + "\n" + text[idx:]
+        changed = True
 if changed:
     Path("$BACKUP_DIR").mkdir(parents=True, exist_ok=True)
     bak = Path("$BACKUP_DIR") / (p.name + ".ipfix.bak")
