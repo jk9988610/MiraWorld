@@ -1,0 +1,16 @@
+[Unit]
+Description=MiraWorld Auth API
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/miraworld-auth
+EnvironmentFile=-/etc/miraworld/auth.env
+ExecStart=/opt/miraworld-auth/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8787
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

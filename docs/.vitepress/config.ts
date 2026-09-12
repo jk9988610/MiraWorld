@@ -1,6 +1,17 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  vite: {
+    server: {
+      proxy: {
+        '/miraworld/api': {
+          target: 'http://127.0.0.1:8787',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/miraworld\/api/, ''),
+        },
+      },
+    },
+  },
   lang: 'zh-Hans',
   title: 'MiraWorld',
   titleTemplate: ':title · MiraWorld',
@@ -22,6 +33,8 @@ export default defineConfig({
         items: [
           { text: '首页', link: '/' },
           { text: '如何阅读本站', link: '/guide/how-to-read' },
+          { text: '登录', link: '/auth/login' },
+          { text: '注册', link: '/auth/register' },
         ],
       },
       {
