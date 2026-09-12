@@ -1,0 +1,5 @@
+{
+  "name": "MiraWorld",
+  "install": "npm ci && pip3 install --user -r deploy/requirements.txt",
+  "start": "echo 'MiraWorld environment ready'"
+}
