@@ -55,11 +55,10 @@
 | **auth** | 行者名 + 密码注册登录 | email 可选 |
 | **world** | 潮灯市打卡 + 可选市内逛点彩蛋 | 地址只到市 |
 | **wallet** | credits（`wallet_credits`）、新手 300 点 | 无提现 |
-| **catalog** | 3～5 item、1 recipe、1 sku | JSON 配置 |
-| **shops** | **1 个系统店**「潮灯市 · 陈师傅」（见 `31`） | 无玩家开店 |
-| **orders** | 下单托管→烹饪→取餐→背包 | 无配送子单 |
-| **inventory** | 背包列表 | 无穿戴槽 |
-| **mail** | **仅系统信箱** | 无玩家往来信 |
+| **catalog** | items + offers（见 `32`） | JSON 配置 |
+| **actors** | 陈师傅挂单 | 店=人 |
+| **records** | order + message + visit + ledger | 四象「事」 |
+| **inventory** | stack | 无穿戴槽 |
 | **profile** | /me 余额、足迹数、简介可改 | 无口味谱 |
 | **UI** | 壳层：地图·食堂·信箱·背包·我的 | 无「我要」页 |
 | **lore** | VitePress 分区页（A～F 区） | 与 `locations.json` 互链 |

@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "id": "item_noodle_bowl",
+      "display": "一碗面",
+      "tags": ["food", "consumable"]
+    },
+    {
+      "id": "item_fog_wheat",
+      "display": "雾麦",
+      "tags": ["material"]
+    },
+    {
+      "id": "item_tidelamp_soy",
+      "display": "酱油",
+      "tags": ["material"]
+    }
+  ]
+}
