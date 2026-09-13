@@ -158,7 +158,7 @@ def sftp_mkdirs(sftp: paramiko.SFTPClient, remote: str) -> None:
 def upload_dir(sftp: paramiko.SFTPClient, local: Path, remote: str) -> None:
     files = [p for p in local.rglob("*") if p.is_file()]
     total = len(files)
-    print(f"Uploading {total} files -> {remote}")
+    print(f"Uploading {total} files -> {remote}", flush=True)
     sftp_mkdirs(sftp, remote)
     for idx, path in enumerate(files, start=1):
         rel = path.relative_to(local).as_posix()
@@ -166,17 +166,18 @@ def upload_dir(sftp: paramiko.SFTPClient, local: Path, remote: str) -> None:
         sftp_mkdirs(sftp, posixpath.dirname(target))
         sftp.put(str(path), target)
         if idx == 1 or idx == total or idx % 25 == 0:
-            print(f"  [{idx}/{total}] {rel}")
-    print(f"Upload complete ({total} files)")
+            print(f"  [{idx}/{total}] {rel}", flush=True)
+    print(f"Upload complete ({total} files)", flush=True)
 
 
 def main() -> int:
+    print("MiraWorld deploy: 检查本地 dist ...", flush=True)
     if not DIST.is_dir():
         print("Dist missing. Run: npm run docs:build", file=sys.stderr)
         return 1
 
     remote_tmp = f"{REMOTE_TMP_PREFIX}-{uuid.uuid4().hex[:8]}"
-    print(f"Connecting to {USER}@{HOST} ...")
+    print(f"MiraWorld deploy: 连接 {USER}@{HOST} ...", flush=True)
     client = connect()
     try:
         run(client, f"mkdir -p {remote_tmp}")
@@ -196,9 +197,9 @@ sudo chown -R www-data:www-data {REMOTE_ROOT}
 echo DEPLOY_OK
 curl -sI http://127.0.0.1/miraworld/ | head -n 5
 """
-        print("Publishing static files on server (copy only, no apt/python setup)...")
+        print("Publishing static files on server (copy only, no apt/python setup)...", flush=True)
         run(client, setup)
-        print(f"Done. Open http://{HOST}/miraworld/")
+        print(f"Done. Open http://{HOST}/miraworld/", flush=True)
         return 0
     finally:
         client.close()
