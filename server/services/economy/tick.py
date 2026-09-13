@@ -46,7 +46,9 @@ def _affordable_offers(city: str, wallet: int) -> list[dict]:
     offers = [
         o
         for o in active_offers(city)
-        if int(o.get("price_credits", 0)) <= wallet and o.get("active", True)
+        if o.get("seller", {}).get("kind") == "npc"
+        and int(o.get("price_credits", 0)) <= wallet
+        and o.get("active", True)
     ]
     return offers
 
