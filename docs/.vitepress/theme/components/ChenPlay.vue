@@ -4,7 +4,7 @@ import { useAuth } from '../composables/useAuth'
 import { useGame, type CatalogOffer } from '../composables/useGame'
 
 const { user, refresh, isLoggedIn } = useAuth()
-const { loadCatalog, placeOrder } = useGame()
+const { loadCatalog, placeOrder, loadWorld, world } = useGame()
 const offers = ref<CatalogOffer[]>([])
 const message = ref('')
 const error = ref('')
@@ -14,6 +14,8 @@ const chenOffers = computed(() =>
   offers.value.filter((o) => o.seller?.id === 'npc_chen'),
 )
 
+const chenNpc = computed(() => world.value?.npcs.find((n) => n.id === 'npc_chen'))
+
 onMounted(async () => {
   await refresh()
   if (!isLoggedIn.value) {
@@ -21,6 +23,7 @@ onMounted(async () => {
     return
   }
   try {
+    await loadWorld()
     const catalog = await loadCatalog()
     offers.value = catalog.offers
   } catch (e) {
@@ -48,7 +51,9 @@ async function order(offer: CatalogOffer) {
 <template>
   <div class="mw-play mw-play--pad" v-if="user">
     <h1>陈师傅 · 食堂</h1>
-    <p class="mw-lead">潮灯市 · 标准汤面，点完即做。</p>
+    <p class="mw-lead">潮灯市 · 点完即做，好了发通知。</p>
+    <p v-if="chenNpc?.greeting" class="mw-quote">{{ chenNpc.greeting }}</p>
+    <p v-if="chenNpc?.extra" class="mw-extra">{{ chenNpc.extra }}</p>
     <p class="mw-meta">余额 {{ user.wallet_credits }} 点</p>
     <p v-if="message" class="mw-msg">{{ message }}</p>
     <p v-if="error" class="mw-err">{{ error }}</p>
@@ -65,7 +70,7 @@ async function order(offer: CatalogOffer) {
         </div>
       </li>
     </ul>
-    <p v-else class="mw-dim">今日菜单还没开。</p>
+    <p v-else class="mw-dim">灶还没热。过会儿再来看看，或先回<a href="/miraworld/play/city.html">潮灯市</a>转转。</p>
 
     <p class="mw-back">
       <a href="/miraworld/play/city.html">← 回潮灯市地图</a>
@@ -80,6 +85,22 @@ async function order(offer: CatalogOffer) {
 
 .mw-lead {
   color: var(--vp-c-text-2);
+}
+
+.mw-quote {
+  margin: 0.5rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: var(--vp-c-bg-soft);
+  font-size: 0.9375rem;
+  color: var(--vp-c-text-1);
+}
+
+.mw-extra {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--vp-c-text-3);
+  font-style: italic;
 }
 
 .mw-meta {

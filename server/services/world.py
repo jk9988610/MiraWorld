@@ -4,6 +4,33 @@ from config_loader import welcome, world
 from db import db, utc_now
 
 
+def _find_spot(city_name: str, spot_id: str) -> dict | None:
+    for city in world().get("cities", []):
+        if city.get("city") == city_name:
+            for spot in city.get("explore_spots", []):
+                if spot.get("id") == spot_id:
+                    return spot
+    return None
+
+
+def visit_message(city: str, spot_id: str | None, first_visit: bool) -> str:
+    w = welcome()
+    if not spot_id:
+        if first_visit:
+            return w.get("city_first_visit") or w.get("onboarding_message", "")
+        return w.get("city_revisit", f"你又回到{city}。")
+
+    spot = _find_spot(city, spot_id)
+    name = spot.get("name", spot_id) if spot else spot_id
+    if first_visit:
+        if spot and spot.get("first_visit"):
+            return spot["first_visit"]
+        return f"你第一次到「{name}」。"
+    if spot and spot.get("revisit"):
+        return spot["revisit"]
+    return f"你又来过「{name}」。"
+
+
 def get_world_payload() -> dict:
     data = world()
     w = welcome()
@@ -36,11 +63,13 @@ def record_visit(player_id: int, city: str, spot_id: str | None) -> dict:
             """,
             (player_id, city, spot, first, now),
         )
+    first_visit = existing is None
     return {
         "city": city,
         "spot_id": spot_id,
-        "first_visit": existing is None,
+        "first_visit": first_visit,
         "visited_at": now,
+        "message": visit_message(city, spot_id, first_visit),
     }
 
 

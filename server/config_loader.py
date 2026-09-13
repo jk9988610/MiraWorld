@@ -33,3 +33,7 @@ def items() -> dict:
 
 def offers() -> dict:
     return load_json("offers.json")
+
+
+def game_messages() -> dict:
+    return load_json("messages.json")

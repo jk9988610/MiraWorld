@@ -20,18 +20,18 @@ onMounted(async () => {
   if (user.value) {
     try {
       const r = await visit(user.value.city)
-      if (r.first_visit) message.value = world.value?.onboarding_message || ''
+      if (r.message) message.value = r.message
     } catch (e) {
       error.value = e instanceof Error ? e.message : '打卡失败'
     }
   }
 })
 
-async function visitSpot(spotId: string, name: string) {
+async function visitSpot(spotId: string) {
   error.value = ''
   try {
     const r = await visit('潮灯市', spotId)
-    message.value = r.first_visit ? `你第一次到「${name}」。` : `你又来过「${name}」。`
+    if (r.message) message.value = r.message
   } catch (e) {
     error.value = e instanceof Error ? e.message : '打卡失败'
   }
@@ -50,7 +50,7 @@ async function visitSpot(spotId: string, name: string) {
       <h2>逛点</h2>
       <ul class="mw-list">
         <li v-for="s in chaodeng.explore_spots" :key="s.id">
-          <button type="button" class="mw-spot" @click="visitSpot(s.id, s.name)">
+          <button type="button" class="mw-spot" @click="visitSpot(s.id)">
             {{ s.name }}
             <small v-if="s.flavor">{{ s.flavor }}</small>
           </button>
@@ -65,6 +65,7 @@ async function visitSpot(spotId: string, name: string) {
           <strong>{{ n.display }}</strong>
           <span class="mw-dim"> · {{ n.city }}</span>
           <p v-if="n.greeting" class="mw-quote">{{ n.greeting }}</p>
+          <p v-if="n.extra" class="mw-extra">{{ n.extra }}</p>
           <p v-if="n.id === 'npc_chen'" class="mw-link">
             <a href="/miraworld/play/chen.html">→ 去食堂点面</a>
           </p>
@@ -130,9 +131,16 @@ async function visitSpot(spotId: string, name: string) {
 }
 
 .mw-quote {
-  margin: 0.25rem 0 0.75rem;
+  margin: 0.25rem 0 0;
   font-size: 0.875rem;
   color: var(--vp-c-text-2);
+}
+
+.mw-extra {
+  margin: 0.15rem 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--vp-c-text-3);
+  font-style: italic;
 }
 
 .mw-link {
