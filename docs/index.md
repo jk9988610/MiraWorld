@@ -4,7 +4,7 @@ layout: home
 hero:
   name: MiraWorld
   text: 可探索的文字世界
-  tagline: 设定即地图。在地点、势力与选择之间漫游——这是一份能当文字冒险读的世界资料。
+  tagline: A区、B区、C区……在分区与选择之间漫游——可探索的文字世界资料。
   actions:
     - theme: brand
       text: 世界概览
