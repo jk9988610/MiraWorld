@@ -8,12 +8,7 @@ from fastapi import HTTPException
 
 from config_loader import game_messages, items
 from db import db, utc_now
-from schemas.bounty import (
-    MAX_ACTIVE_BOUNTIES,
-    MAX_BOUNTY_QTY,
-    BountyListResponse,
-    BountyPublic,
-)
+from schemas.bounty import MAX_LISTED_BOUNTIES, BountyListResponse, BountyPublic
 
 
 def _bounty_copy(key: str, **kwargs: str) -> str:
@@ -139,8 +134,8 @@ def create_bounty(
 ) -> BountyPublic:
     if kind not in ("buy", "sell"):
         raise HTTPException(status_code=400, detail="只支持委托购买或委托出售")
-    if qty < 1 or qty > MAX_BOUNTY_QTY:
-        raise HTTPException(status_code=400, detail=f"数量须在 1～{MAX_BOUNTY_QTY} 之间")
+    if qty < 1:
+        raise HTTPException(status_code=400, detail="数量至少为 1")
 
     item_display = _item_display(item_id)
     title = _title_for(kind, item_display, qty)
@@ -149,15 +144,18 @@ def create_bounty(
     payload = json.dumps({"kind": kind, "item_id": item_id, "qty": qty})
 
     with db() as conn:
-        active = conn.execute(
+        listed = conn.execute(
             """
             SELECT COUNT(*) AS n FROM bounties
-            WHERE issuer_id = ? AND status IN ('open', 'taken', 'submitted')
+            WHERE issuer_id = ? AND status = 'open'
             """,
             (issuer_id,),
         ).fetchone()
-        if active and int(active["n"]) >= MAX_ACTIVE_BOUNTIES:
-            raise HTTPException(status_code=400, detail=f"最多同时有 {MAX_ACTIVE_BOUNTIES} 件委托商品")
+        if listed and int(listed["n"]) >= MAX_LISTED_BOUNTIES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"最多同时上架 {MAX_LISTED_BOUNTIES} 个委托订单（购买或出售合计）",
+            )
 
         wallet = conn.execute(
             "SELECT wallet_credits FROM users WHERE id = ?",

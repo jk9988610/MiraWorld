@@ -6,14 +6,13 @@ from pydantic import BaseModel, Field
 
 
 BountyKind = Literal["buy", "sell"]
-MAX_BOUNTY_QTY = 20
-MAX_ACTIVE_BOUNTIES = 20
+MAX_LISTED_BOUNTIES = 10
 
 
 class BountyCreateBody(BaseModel):
     kind: BountyKind
     item_id: str = Field(min_length=1, max_length=64)
-    qty: int = Field(ge=1, le=MAX_BOUNTY_QTY)
+    qty: int = Field(ge=1, le=9999)
     price_credits: int = Field(ge=1, le=9999)
     city: str = Field(default="潮灯市", min_length=1, max_length=64)
 

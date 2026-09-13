@@ -158,8 +158,8 @@ async function doCancel(id: string) {
 <template>
   <div class="mw-play mw-play--pad" v-if="user">
     <h1>悬赏栏</h1>
-    <p class="mw-lead">只支持<strong>委托购买</strong>与<strong>委托出售</strong>，每件 1～20 个。成交全程走通知。</p>
-    <p class="mw-meta">余额 {{ user.wallet_credits }} 点 · 进行中委托最多 20 件</p>
+    <p class="mw-lead">只支持<strong>委托购买</strong>与<strong>委托出售</strong>。成交全程走通知。</p>
+    <p class="mw-meta">余额 {{ user.wallet_credits }} 点 · 最多同时上架 10 个委托订单</p>
     <p v-if="error" class="mw-err">{{ error }}</p>
 
     <section class="mw-form">
@@ -178,7 +178,7 @@ async function doCancel(id: string) {
       </label>
       <label class="mw-inline">
         <span>数量</span>
-        <input v-model.number="qty" type="number" min="1" max="20" /> 件（最多 20）
+        <input v-model.number="qty" type="number" min="1" /> 件
       </label>
       <label class="mw-inline">
         <span>托管</span>

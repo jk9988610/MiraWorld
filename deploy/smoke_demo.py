@@ -368,18 +368,31 @@ def run_v15_once(base: str, run_index: int) -> None:
             f"issuer wallet expected 250 after cancel refund, got {issuer_after_cancel.get('wallet_credits')}"
         )
 
+    for i in range(8):
+        api(
+            base,
+            issuer_opener,
+            "POST",
+            "/bounties",
+            {
+                "kind": "buy" if i % 2 == 0 else "sell",
+                "item_id": "item_noodle_bowl",
+                "qty": 1,
+                "price_credits": 5,
+            },
+        )
     try:
         api(
             base,
             issuer_opener,
             "POST",
             "/bounties",
-            {"kind": "buy", "item_id": "item_noodle_bowl", "qty": 21, "price_credits": 10},
+            {"kind": "buy", "item_id": "item_noodle_bowl", "qty": 1, "price_credits": 5},
         )
     except DemoError:
         pass
     else:
-        raise DemoError("qty 21 should be rejected")
+        raise DemoError("11th open bounty should be rejected")
 
     print(
         f"  v1.5 run {run_index}: OK issuer={issuer_handle} worker={worker_handle}",
