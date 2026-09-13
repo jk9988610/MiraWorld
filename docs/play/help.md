@@ -106,6 +106,6 @@ title: 怎么玩
 | **无岗市民** | **最低生活补贴**（8 点/人/日，城市福利基金） |
 | **在岗工人** | **最低工资**（12 点/人/日，机构发薪） |
 
-查询：`GET /economy/status` · 聚光灯：`GET /economy/institutions/inst_chen_noodle/spotlight`
+查询：`GET /economy/status` · 聚光灯：`GET /shop/inst_chen_noodle/spotlight`
 
-**仍无 UI：** 经营仪表盘、Spotlight 前端展示 — 见 `05-版本路线` P2。
+**UI：** [城市经营](/play/economy.html) 仪表盘 · 陈师傅页 Spotlight 来客列表

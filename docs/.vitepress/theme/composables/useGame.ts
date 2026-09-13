@@ -145,6 +145,52 @@ export interface GroundItem {
   available: boolean
 }
 
+export interface SpotlightItem {
+  display_name: string
+  job_display: string
+  pop_group_id: string
+  order_id: string
+  created_at: string
+}
+
+export interface EconomyInstitution {
+  id: string
+  display_name: string
+  kind: string
+  wallet_credits: number
+  open: boolean
+  offer_id: string | null
+}
+
+export interface EconomyDashboard {
+  institution_wallet_total: number
+  pop_orders_total: number
+  last_payroll_total: number
+  last_payroll_groups: number
+  last_payroll_underpaid: number
+  last_subsidy_total: number
+  last_subsidy_groups: number
+  last_welfare_granted: number
+  last_purchases: number
+  welfare_fund_balance: number
+}
+
+export interface EconomyStatus {
+  city: string
+  institutions: EconomyInstitution[]
+  pop_groups: {
+    count: number
+    employed_count: number
+    unemployed_count: number
+    employed_wallet_total: number
+    unemployed_wallet_total: number
+  }
+  welfare_fund: { balance: number; last_grant_date?: string | null } | null
+  last_tick: { tick_date: string; summary: Record<string, unknown>; created_at: string } | null
+  dashboard: EconomyDashboard
+  config: { min_wage: number; min_subsidy: number; welfare_grant: number }
+}
+
 export interface VisitResult {
   first_visit: boolean
   city: string
@@ -431,6 +477,22 @@ export function useGame() {
     return parseJson<MessageData>(res)
   }
 
+  async function loadEconomyStatus(city = '潮灯市') {
+    const res = await fetch(
+      `${API_BASE}/economy/status?city=${encodeURIComponent(city)}`,
+      { credentials: 'include' },
+    )
+    return parseJson<EconomyStatus>(res)
+  }
+
+  async function loadSpotlight(institutionId: string) {
+    const res = await fetch(
+      `${API_BASE}/shop/${encodeURIComponent(institutionId)}/spotlight`,
+      { credentials: 'include' },
+    )
+    return parseJson<{ institution_id: string; items: SpotlightItem[] }>(res)
+  }
+
   return {
     world,
     loadWorld,
@@ -464,5 +526,7 @@ export function useGame() {
     acceptOrder,
     markOrderReady,
     sendMessage,
+    loadEconomyStatus,
+    loadSpotlight,
   }
 }

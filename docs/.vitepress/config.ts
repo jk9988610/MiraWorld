@@ -42,6 +42,7 @@ export default defineConfig({
         items: [
           { text: '怎么玩', link: '/play/help' },
           { text: '潮灯市', link: '/play/city' },
+          { text: '城市经营', link: '/play/economy' },
           { text: '陈师傅', link: '/play/chen' },
           { text: '我的店', link: '/play/my-shop' },
           { text: '悬赏栏', link: '/play/bounties' },

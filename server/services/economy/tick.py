@@ -499,7 +499,15 @@ def get_economy_status(city: str = "潮灯市") -> dict:
             """,
             (city,),
         ).fetchone()
+        pop_orders = conn.execute(
+            """
+            SELECT COUNT(*) AS c FROM orders WHERE buyer_kind = 'pop_group' AND city = ?
+            """,
+            (city,),
+        ).fetchone()
 
+    employed_count = sum(1 for g in groups if g["primary_institution_id"])
+    unemployed_count = len(groups) - employed_count
     employed_wallet = sum(
         int(g["wallet_credits"])
         for g in groups
@@ -510,6 +518,14 @@ def get_economy_status(city: str = "潮灯市") -> dict:
         for g in groups
         if not g["primary_institution_id"]
     )
+    institution_wallet_total = sum(int(i["wallet_credits"]) for i in institutions)
+
+    last_summary = (
+        json.loads(last_tick["summary_json"] or "{}") if last_tick else {}
+    )
+    payroll = last_summary.get("payroll", {})
+    welfare = last_summary.get("welfare", {})
+    purchases = last_summary.get("purchases", {})
 
     return {
         "city": city,
@@ -518,6 +534,8 @@ def get_economy_status(city: str = "潮灯市") -> dict:
         ],
         "pop_groups": {
             "count": len(groups),
+            "employed_count": employed_count,
+            "unemployed_count": unemployed_count,
             "employed_wallet_total": employed_wallet,
             "unemployed_wallet_total": unemployed_wallet,
             "groups": [dict(r) for r in groups],
@@ -526,12 +544,24 @@ def get_economy_status(city: str = "潮灯市") -> dict:
         "last_tick": (
             {
                 "tick_date": last_tick["tick_date"],
-                "summary": json.loads(last_tick["summary_json"] or "{}"),
+                "summary": last_summary,
                 "created_at": last_tick["created_at"],
             }
             if last_tick
             else None
         ),
+        "dashboard": {
+            "institution_wallet_total": institution_wallet_total,
+            "pop_orders_total": int(pop_orders["c"]) if pop_orders else 0,
+            "last_payroll_total": int(payroll.get("total_paid", 0)),
+            "last_payroll_groups": int(payroll.get("paid_groups", 0)),
+            "last_payroll_underpaid": int(payroll.get("underpaid", 0)),
+            "last_subsidy_total": int(welfare.get("total_subsidy", 0)),
+            "last_subsidy_groups": int(welfare.get("subsidized_groups", 0)),
+            "last_welfare_granted": int(welfare.get("granted", 0)),
+            "last_purchases": int(purchases.get("count", 0)),
+            "welfare_fund_balance": int(fund["balance"]) if fund else 0,
+        },
         "config": {
             "min_wage": min_wage(),
             "min_subsidy": min_subsidy(),

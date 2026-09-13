@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
+from db import db
 from deps import get_current_player
+from schemas.economy import SpotlightResponse
 from schemas.player import PlayerPublic
 from schemas.shop import (
     MarketResponse,
@@ -12,6 +14,7 @@ from schemas.shop import (
     ShopMeResponse,
     ShopPublic,
 )
+from services.economy.spotlight import list_spotlight
 from services.shops import (
     apply_shop,
     create_player_offer,
@@ -23,6 +26,19 @@ from services.shops import (
 )
 
 router = APIRouter(prefix="/shop", tags=["shop"])
+
+_SHOP_SPOTLIGHT_MAP = {
+    "inst_chen_noodle": "inst_chen_noodle",
+    "inst_chaodeng_clinic": "inst_chaodeng_clinic",
+    "inst_east_smithy": "inst_east_smithy",
+    "npc_chen": "inst_chen_noodle",
+}
+
+
+def _resolve_institution_id(shop_id: str) -> str | None:
+    if shop_id in _SHOP_SPOTLIGHT_MAP:
+        return _SHOP_SPOTLIGHT_MAP[shop_id]
+    return shop_id if shop_id.startswith("inst_") else None
 
 
 @router.get("/me", response_model=ShopMeResponse)
@@ -80,3 +96,19 @@ def shop_toggle_auto(
 @router.get("/market", response_model=MarketResponse)
 def shop_market(city: str = "潮灯市") -> MarketResponse:
     return list_market(city)
+
+
+@router.get("/{shop_id}/spotlight", response_model=SpotlightResponse)
+def shop_spotlight(shop_id: str) -> SpotlightResponse:
+    institution_id = _resolve_institution_id(shop_id)
+    if institution_id is None:
+        return SpotlightResponse(institution_id=shop_id, items=[])
+    with db() as conn:
+        inst = conn.execute(
+            "SELECT id FROM institutions WHERE id = ?",
+            (institution_id,),
+        ).fetchone()
+        if inst is None:
+            return SpotlightResponse(institution_id=shop_id, items=[])
+        items = list_spotlight(conn, institution_id)
+    return SpotlightResponse(institution_id=institution_id, items=items)

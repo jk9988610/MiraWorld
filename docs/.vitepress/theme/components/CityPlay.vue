@@ -90,6 +90,9 @@ async function groundAction(kind: 'put' | 'consume' | 'use') {
     <h1>{{ chaodeng?.city || '潮灯市' }}</h1>
     <p class="mw-lead">{{ chaodeng?.summary }}</p>
     <p v-if="user" class="mw-meta">你在 {{ user.city }} · {{ user.wallet_credits }} 点</p>
+    <p class="mw-link">
+      <a href="/miraworld/play/economy.html">→ 城市经营仪表盘</a>
+    </p>
     <p v-if="message" class="mw-msg">{{ message }}</p>
     <p v-if="error" class="mw-err">{{ error }}</p>
 
