@@ -12,3 +12,11 @@ class StackEntry(BaseModel):
 
 class StackListResponse(BaseModel):
     stacks: list[StackEntry]
+
+
+class StackActionResponse(BaseModel):
+    item_id: str
+    display: str
+    qty: int
+    message: str
+    stacks: list[StackEntry]

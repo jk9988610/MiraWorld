@@ -79,6 +79,31 @@ export interface StackData {
   tags?: string[]
 }
 
+export interface GroundItem {
+  spot_id: string
+  item_id: string
+  display: string
+  qty: number
+  tags?: string[]
+  available: boolean
+}
+
+export interface VisitResult {
+  first_visit: boolean
+  city: string
+  spot_id?: string | null
+  message?: string
+  ground?: GroundItem
+}
+
+export interface StackActionResult {
+  item_id: string
+  display: string
+  qty: number
+  message: string
+  stacks: StackData[]
+}
+
 const world = ref<WorldData | null>(null)
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -103,7 +128,37 @@ export function useGame() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ city, spot_id: spotId ?? null }),
     })
-    return parseJson<{ first_visit: boolean; city: string; spot_id?: string | null; message?: string }>(res)
+    return parseJson<VisitResult>(res)
+  }
+
+  async function spotPut(city: string, spotId: string) {
+    const res = await fetch(`${API_BASE}/records/spot/put`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city, spot_id: spotId }),
+    })
+    return parseJson<{ message: string; stacks: StackData[] }>(res)
+  }
+
+  async function spotConsume(city: string, spotId: string) {
+    const res = await fetch(`${API_BASE}/records/spot/consume`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city, spot_id: spotId }),
+    })
+    return parseJson<{ message: string }>(res)
+  }
+
+  async function spotUse(city: string, spotId: string) {
+    const res = await fetch(`${API_BASE}/records/spot/use`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ city, spot_id: spotId }),
+    })
+    return parseJson<{ message: string }>(res)
   }
 
   async function loadCatalog() {
@@ -154,10 +209,29 @@ export function useGame() {
     return parseJson<{ stacks: StackData[] }>(res)
   }
 
+  async function consumeStack(itemId: string) {
+    const res = await fetch(`${API_BASE}/stacks/${encodeURIComponent(itemId)}/consume`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<StackActionResult>(res)
+  }
+
+  async function useStack(itemId: string) {
+    const res = await fetch(`${API_BASE}/stacks/${encodeURIComponent(itemId)}/use`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<StackActionResult>(res)
+  }
+
   return {
     world,
     loadWorld,
     visit,
+    spotPut,
+    spotConsume,
+    spotUse,
     loadCatalog,
     placeOrder,
     loadOrder,
@@ -165,5 +239,7 @@ export function useGame() {
     loadMessages,
     markMessageRead,
     loadStacks,
+    consumeStack,
+    useStack,
   }
 }
