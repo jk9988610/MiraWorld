@@ -9,7 +9,10 @@
     "docs:preview": "vitepress preview docs",
     "auth:dev": "cd server && MIRAWORLD_DB=../data/miraworld.db MIRAWORLD_JWT_SECRET=dev-secret-change-me python3 -m uvicorn app:app --reload --port 8787",
     "deploy": "python3 -u deploy/deploy.py",
-    "deploy:api": "python3 -u deploy/sync_api.py"
+    "deploy:api": "python3 -u deploy/sync_api.py",
+    "backup:db": "python3 -u deploy/backup_db.py",
+    "backup:db:cron": "python3 -u deploy/backup_db.py --install-cron",
+    "smoke:demo": "python3 -u deploy/smoke_demo.py"
   },
   "devDependencies": {
     "vitepress": "^1.6.3"
