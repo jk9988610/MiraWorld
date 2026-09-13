@@ -1,0 +1,7 @@
+{
+  "min_wage_per_capita_per_day": 12,
+  "min_living_subsidy_per_capita_per_day": 8,
+  "city_welfare_grant_per_day": 120000,
+  "min_wage_floor_enabled": true,
+  "max_purchases_per_group_per_tick": 5
+}

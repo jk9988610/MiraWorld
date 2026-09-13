@@ -37,3 +37,19 @@ def offers() -> dict:
 
 def game_messages() -> dict:
     return load_json("messages.json")
+
+
+def utopia_economy() -> dict:
+    return load_json("economy/utopia.json")
+
+
+def economy_institutions() -> dict:
+    return load_json("economy/institutions.json")
+
+
+def economy_pop_groups() -> dict:
+    return load_json("economy/pop_groups.json")
+
+
+def pop_spotlight_names() -> dict:
+    return load_json("names/pop_spotlight.json")

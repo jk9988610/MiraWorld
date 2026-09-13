@@ -1,0 +1,22 @@
+{
+  "default_headcount": 1000,
+  "default_pref": {
+    "food": 0.45,
+    "consumable": 0.25,
+    "material": 0.15,
+    "tool": 0.1,
+    "other": 0.05
+  },
+  "groups": [
+    { "id": "pg_01", "primary_institution_id": "inst_chen_noodle", "job_type": "chef", "job_display": "厨师" },
+    { "id": "pg_02", "primary_institution_id": "inst_chen_noodle", "job_type": "chef", "job_display": "厨师" },
+    { "id": "pg_03", "primary_institution_id": "inst_chen_noodle", "job_type": "waiter", "job_display": "服务员" },
+    { "id": "pg_04", "primary_institution_id": "inst_chaodeng_clinic", "job_type": "doctor", "job_display": "医生" },
+    { "id": "pg_05", "primary_institution_id": "inst_chaodeng_clinic", "job_type": "doctor", "job_display": "医生" },
+    { "id": "pg_06", "primary_institution_id": "inst_chaodeng_clinic", "job_type": "clerk", "job_display": "账房" },
+    { "id": "pg_07", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" },
+    { "id": "pg_08", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" },
+    { "id": "pg_09", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" },
+    { "id": "pg_10", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" }
+  ]
+}
