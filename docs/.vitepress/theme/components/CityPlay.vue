@@ -65,9 +65,11 @@ async function visitSpot(spotId: string, name: string) {
           <strong>{{ n.display }}</strong>
           <span class="mw-dim"> · {{ n.city }}</span>
           <p v-if="n.greeting" class="mw-quote">{{ n.greeting }}</p>
+          <p v-if="n.id === 'npc_chen'" class="mw-link">
+            <a href="/miraworld/play/chen.html">→ 去食堂点面</a>
+          </p>
         </li>
       </ul>
-      <p class="mw-hint">食堂：找 <strong>陈师傅</strong>（点面 · Phase 2）</p>
     </section>
   </div>
 </template>
@@ -133,8 +135,8 @@ async function visitSpot(spotId: string, name: string) {
   color: var(--vp-c-text-2);
 }
 
-.mw-hint {
+.mw-link {
   font-size: 0.875rem;
-  color: var(--vp-c-text-3);
+  margin: 0.25rem 0 0;
 }
 </style>

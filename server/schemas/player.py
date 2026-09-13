@@ -12,6 +12,7 @@ class PlayerPublic(BaseModel):
     bio: str
     created_at: str
     visit_count: int = 0
+    stacks: list[dict] = []
 
 
 class RegisterBody(BaseModel):

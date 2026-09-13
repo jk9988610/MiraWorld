@@ -7,9 +7,10 @@ from fastapi import HTTPException
 from config_loader import welcome
 from db import db, utc_now
 from schemas.player import PlayerPublic
+from services.inventory import stack_summary
 
 
-def _row_to_player(row: sqlite3.Row, visit_count: int = 0) -> PlayerPublic:
+def _row_to_player(row: sqlite3.Row, visit_count: int = 0, stacks: list[dict] | None = None) -> PlayerPublic:
     return PlayerPublic(
         id=row["id"],
         handle=row["handle"],
@@ -19,6 +20,7 @@ def _row_to_player(row: sqlite3.Row, visit_count: int = 0) -> PlayerPublic:
         bio=row["bio"] or "",
         created_at=row["created_at"],
         visit_count=visit_count,
+        stacks=stacks or [],
     )
 
 
@@ -41,7 +43,25 @@ def get_player_by_id(player_id: int) -> PlayerPublic:
         ).fetchone()
         if row is None:
             raise HTTPException(status_code=401, detail="用户不存在")
-        return _row_to_player(row, _visit_count(conn, player_id))
+        stack_rows = conn.execute(
+            """
+            SELECT item_id, qty FROM stacks
+            WHERE player_id = ? AND qty > 0
+            ORDER BY item_id
+            """,
+            (player_id,),
+        ).fetchall()
+        from services.catalog import item_display
+
+        stacks = [
+            {
+                "item_id": s["item_id"],
+                "display": item_display(s["item_id"]),
+                "qty": int(s["qty"]),
+            }
+            for s in stack_rows
+        ]
+        return _row_to_player(row, _visit_count(conn, player_id), stacks)
 
 
 def register_player(

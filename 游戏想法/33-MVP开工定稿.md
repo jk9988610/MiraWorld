@@ -77,16 +77,16 @@
 
 ### Phase 2 — 事 + 物（MVP 闭环）
 
-- [ ] `stacks` 表
-- [ ] `records` 分表或统一表：`orders`, `messages`, `visits`, `ledger_entries`
-- [ ] `GET /api/catalog` → items + offers
-- [ ] `POST /api/records/order` 下单（校验余额 → escrow → ledger）
-- [ ] 订单状态机：`created → escrowed → processing → ready → completed → settled`
-- [ ] NPC 厨房：processing 可定时/即时 → ready
-- [ ] `POST /api/records/order/{id}/pickup` 取餐 → stack +1
-- [ ] `GET /api/records/messages` 系统通知
-- [ ] 分账 ledger（陈师傅份额可合并进平台或记 payload，MVP 简化为 platform fee 一行）
-- [ ] 页面：陈师傅菜单、订单详情、通知、背包
+- [x] `stacks` 表
+- [x] `records` 分表或统一表：`orders`, `messages`, `visits`, `ledger_entries`
+- [x] `GET /api/catalog` → items + offers
+- [x] `POST /api/records/order` 下单（校验余额 → escrow → ledger）
+- [x] 订单状态机：`created → escrowed → processing → ready → completed → settled`
+- [x] NPC 厨房：processing 可定时/即时 → ready
+- [x] `POST /api/records/order/{id}/pickup` 取餐 → stack +1
+- [x] `GET /api/records/messages` 系统通知
+- [x] 分账 ledger（陈师傅份额可合并进平台或记 payload，MVP 简化为 platform fee 一行）
+- [x] 页面：陈师傅菜单、订单详情、通知、背包
 
 ### Phase 3 — 打磨（上线前）
 

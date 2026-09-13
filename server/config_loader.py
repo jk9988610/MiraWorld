@@ -25,3 +25,11 @@ def world() -> dict:
 
 def schema() -> dict:
     return load_json("schema.json")
+
+
+def items() -> dict:
+    return load_json("items.json")
+
+
+def offers() -> dict:
+    return load_json("offers.json")

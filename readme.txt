@@ -16,6 +16,7 @@ Cursor → Cloud Agents → Environment → Secrets:
 --- 部署到 IP 子路径 /miraworld/（两步，不要合并）---
 npm run docs:build
 npm run deploy
+npm run deploy:api
 
 deploy 只在 Cloud Agent VM 里用 Python 上传 dist；不会在云服务器上跑 apt/python 安装。
 首次 nginx 引导见 bootstrap-on-server.sh（服务器上执行一次即可）。
