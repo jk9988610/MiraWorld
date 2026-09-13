@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Deploy MiraWorld VitePress dist to admin@8.133.252.224 via SSH.
+"""Upload pre-built VitePress dist from this VM to admin@8.133.252.224 via SSH.
+
+Run in Cloud Agent VM (two separate steps):
+  npm run docs:build
+  npm run deploy
+
+Build happens here; the cloud server only receives a tar.gz and extracts it.
+No apt/python/pip setup runs on the server during deploy.
 
 Auth priority:
 1. MIRAWORLD_SSH_PRIVATE_KEY env (PEM/OpenSSH private key text)
@@ -8,11 +15,10 @@ Auth priority:
 """
 from __future__ import annotations
 
-import errno
 import getpass
 import os
-import posixpath
 import sys
+import tarfile
 import tempfile
 import uuid
 from pathlib import Path
@@ -24,16 +30,9 @@ USER = "admin"
 SSH_KEY_NAME = "jk9988610.pem"
 SSH_KEY_ENV = "MIRAWORLD_SSH_PRIVATE_KEY"
 REMOTE_ROOT = "/var/www/html/miraworld"
-REMOTE_TMP_PREFIX = "/tmp/miraworld-dist"
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "docs" / ".vitepress" / "dist"
-NGINX_CONF = ROOT / "deploy" / "nginx-miraworld.conf"
-SETUP_NGINX = ROOT / "deploy" / "setup-nginx.sh"
-SERVER_DIR = ROOT / "server"
-SETUP_AUTH = ROOT / "deploy" / "setup-auth.sh"
-AUTH_SERVICE = ROOT / "deploy" / "miraworld-auth.service"
-REMOTE_AUTH_SRC = "/tmp/miraworld-auth-src"
 
 
 def _resolve_key_path() -> Path | None:
@@ -49,11 +48,9 @@ def _resolve_key_path() -> Path | None:
 
 
 def _materialize_env_key() -> tuple[Path | None, Path | None]:
-    """Write MIRAWORLD_SSH_PRIVATE_KEY to a temp file. Returns (path, cleanup_path)."""
     raw = os.environ.get(SSH_KEY_ENV, "").strip()
     if not raw:
         return None, None
-    # Normalize escaped newlines from some secret UIs
     if "\\n" in raw and "\n" not in raw:
         raw = raw.replace("\\n", "\n")
     if not raw.endswith("\n"):
@@ -89,7 +86,7 @@ def connect() -> paramiko.SSHClient:
         "look_for_keys": False,
     }
     if key_path is not None:
-        print(f"SSH key: {key_path}")
+        print(f"SSH key: {key_path}", flush=True)
         kwargs["key_filename"] = str(key_path)
 
     try:
@@ -123,13 +120,13 @@ def connect() -> paramiko.SSHClient:
 
 
 def run(client: paramiko.SSHClient, cmd: str, check: bool = True) -> str:
-    print(f"$ {cmd}")
+    print(f"$ {cmd}", flush=True)
     stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
     out = stdout.read().decode("utf-8", errors="replace")
     err = stderr.read().decode("utf-8", errors="replace")
     code = stdout.channel.recv_exit_status()
     if out.strip():
-        print(out.rstrip())
+        print(out.rstrip(), flush=True)
     if err.strip():
         print(err.rstrip(), file=sys.stderr)
     if check and code != 0:
@@ -137,105 +134,54 @@ def run(client: paramiko.SSHClient, cmd: str, check: bool = True) -> str:
     return out
 
 
-def _sftp_missing(exc: BaseException) -> bool:
-    return isinstance(exc, OSError) and exc.errno in (errno.ENOENT, errno.ENOTDIR)
-
-
-def sftp_mkdirs(sftp: paramiko.SFTPClient, remote: str) -> None:
-    parts = remote.strip("/").split("/")
-    cur = ""
-    for p in parts:
-        cur = f"{cur}/{p}"
-        try:
-            sftp.stat(cur)
-        except OSError as exc:
-            if not _sftp_missing(exc):
-                raise
-            sftp.mkdir(cur)
-
-
-def upload_dir(sftp: paramiko.SFTPClient, local: Path, remote: str) -> None:
-    sftp_mkdirs(sftp, remote)
-    for path in local.rglob("*"):
-        rel = path.relative_to(local).as_posix()
-        target = posixpath.join(remote, rel)
-        if path.is_dir():
-            try:
-                sftp.stat(target)
-            except OSError as exc:
-                if not _sftp_missing(exc):
-                    raise
-                sftp.mkdir(target)
-        else:
-            sftp_mkdirs(sftp, posixpath.dirname(target))
-            sftp.put(str(path), target)
+def build_tarball(dist: Path) -> Path:
+    fd, name = tempfile.mkstemp(prefix="miraworld_dist_", suffix=".tar.gz")
+    os.close(fd)
+    path = Path(name)
+    print(f"打包 dist -> {path} ...", flush=True)
+    with tarfile.open(path, "w:gz") as tar:
+        tar.add(dist, arcname=".")
+    size_mb = path.stat().st_size / (1024 * 1024)
+    print(f"打包完成: {size_mb:.2f} MB", flush=True)
+    return path
 
 
 def main() -> int:
+    print("MiraWorld deploy: 检查本地 dist ...", flush=True)
     if not DIST.is_dir():
         print("Dist missing. Run: npm run docs:build", file=sys.stderr)
         return 1
 
-    remote_tmp = f"{REMOTE_TMP_PREFIX}-{uuid.uuid4().hex[:8]}"
-    print(f"Connecting to {USER}@{HOST} ...")
+    tarball = build_tarball(DIST)
+    remote_tar = f"/tmp/miraworld-dist-{uuid.uuid4().hex[:8]}.tar.gz"
+    print(f"MiraWorld deploy: 连接 {USER}@{HOST} ...", flush=True)
     client = connect()
     try:
-        run(client, f"mkdir -p {remote_tmp}")
+        print(f"上传 tar.gz -> {remote_tar} ...", flush=True)
         sftp = client.open_sftp()
         try:
-            print(f"Uploading {DIST} -> {remote_tmp}")
-            upload_dir(sftp, DIST, remote_tmp)
-            upload_dir(sftp, SERVER_DIR, REMOTE_AUTH_SRC)
-            sftp.put(str(NGINX_CONF), "/tmp/nginx-miraworld.conf")
-            sftp.put(str(SETUP_NGINX), "/tmp/setup-nginx.sh")
-            sftp.put(str(SETUP_AUTH), "/tmp/setup-auth.sh")
-            sftp.put(str(AUTH_SERVICE), "/tmp/miraworld-auth.service")
-            jwt_secret = os.environ.get("MIRAWORLD_JWT_SECRET", "").strip()
-            if jwt_secret:
-                fd, auth_env_path = tempfile.mkstemp(prefix="miraworld_auth_", suffix=".env")
-                try:
-                    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
-                        f.write(
-                            "MIRAWORLD_ENV=production\n"
-                            "MIRAWORLD_DB=/var/lib/miraworld/miraworld.db\n"
-                            f"MIRAWORLD_JWT_SECRET={jwt_secret}\n"
-                        )
-                    sftp.put(auth_env_path, "/tmp/miraworld-auth.env")
-                finally:
-                    Path(auth_env_path).unlink(missing_ok=True)
+            sftp.put(str(tarball), remote_tar)
         finally:
             sftp.close()
+        print("上传完成", flush=True)
 
-        auth_env_copy = ""
-        if os.environ.get("MIRAWORLD_JWT_SECRET", "").strip():
-            auth_env_copy = """
-sudo mkdir -p /etc/miraworld
-sudo cp /tmp/miraworld-auth.env /etc/miraworld/auth.env
-sudo chmod 600 /etc/miraworld/auth.env
-"""
-
-        # Copy site files BEFORE setup-nginx.sh reloads nginx (avoids /miraworld/ 404 race).
         setup = f"""
 set -e
 sudo mkdir -p {REMOTE_ROOT}
 sudo find {REMOTE_ROOT} -mindepth 1 -delete
-sudo cp -a {remote_tmp}/. {REMOTE_ROOT}/
-sudo rm -rf {remote_tmp}
+sudo tar -xzf {remote_tar} -C {REMOTE_ROOT}
+sudo rm -f {remote_tar}
 sudo chown -R www-data:www-data {REMOTE_ROOT}
-chmod +x /tmp/setup-nginx.sh
-chmod +x /tmp/setup-auth.sh
-{auth_env_copy}
-sudo bash /tmp/setup-auth.sh
-sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
 echo DEPLOY_OK
-curl -sI http://127.0.0.1/miraworld/ | head -n 8
-curl -s http://127.0.0.1/miraworld/api/health
+curl -sI http://127.0.0.1/miraworld/ | head -n 5
 """
+        print("服务器解压发布（仅 tar，无 apt/python）...", flush=True)
         run(client, setup)
-        print(f"Done. Open http://{HOST}/miraworld/")
+        print(f"Done. Open http://{HOST}/miraworld/", flush=True)
         return 0
     finally:
         client.close()
+        tarball.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
