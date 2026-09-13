@@ -217,7 +217,7 @@ mail_messages  # system only, from_user_id NULL
 | `items.json` | 面、面材、酱油、碗 |
 | `recipes.json` | 1 个面配方 |
 | `shops.json` | 1 系统店 + sku 引用 |
-| `welcome.json` | 新手灯油、帮助文案 |
+| `welcome.json` | 新手 30 金、帮助文案 |
 
 ---
 
@@ -271,7 +271,7 @@ mail_messages  # system only, from_user_id NULL
 
 **讲：**  
 - 一座可逛的文字世界，来过会记得  
-- 真用灯油点一碗面，账在馆里  
+- 真用金、银点一碗面，账在馆里  
 - 信箱异步收信，不催你在线  
 
 **不讲：**  
@@ -291,7 +291,7 @@ mail_messages  # system only, from_user_id NULL
 - [ ] 余额不足下单有明确提示  
 - [ ] 订单与背包 L2 一致（真扣真给）  
 - [ ] 移动端底栏可用  
-- [ ] 帮助页说明灯油、SKU、信箱  
+- [ ] 帮助页说明金银、SKU、信箱  
 - [ ] 单库备份脚本  
 - [ ] 设计 doc README 已标 v1.0 范围  
 - [ ] 发布会话术与功能一致（不过度承诺）  
