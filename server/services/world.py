@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from config_loader import welcome, world
 from db import db, utc_now
+from services.spot_loot import ground_item
 
 
 def _find_spot(city_name: str, spot_id: str) -> dict | None:
@@ -64,13 +65,17 @@ def record_visit(player_id: int, city: str, spot_id: str | None) -> dict:
             (player_id, city, spot, first, now),
         )
     first_visit = existing is None
-    return {
+    result = {
         "city": city,
         "spot_id": spot_id,
         "first_visit": first_visit,
         "visited_at": now,
         "message": visit_message(city, spot_id, first_visit),
     }
+    ground = ground_item(player_id, city, spot_id)
+    if ground:
+        result["ground"] = ground
+    return result
 
 
 def list_visits(player_id: int) -> list[dict]:

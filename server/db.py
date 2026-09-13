@@ -126,6 +126,20 @@ def init_db() -> None:
         )
         conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS spot_loot_claims (
+                player_id INTEGER NOT NULL,
+                city TEXT NOT NULL,
+                spot_id TEXT NOT NULL,
+                item_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (player_id, city, spot_id),
+                FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS stacks (
                 player_id INTEGER NOT NULL,
                 item_id TEXT NOT NULL,

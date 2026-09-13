@@ -40,7 +40,12 @@
           "name": "晚霞岸",
           "flavor": "湖景歇脚",
           "first_visit": "湖面上拖着一道旧日的金。第一次到晚霞岸，你决定先歇一歇。",
-          "revisit": "晚霞岸的风还是软的。适合什么都不做，只等面好了去读通知。"
+          "revisit": "晚霞岸的风还是软的。适合什么都不做，只等面好了去读通知。",
+          "loot": {
+            "item_id": "item_mist_snack",
+            "qty": 1,
+            "once": true
+          }
         },
         {
           "id": "spot_market",
@@ -54,7 +59,12 @@
           "name": "文档塔",
           "flavor": "规则公示",
           "first_visit": "文档塔里堆着馆规和旧记录。第一次来，你看见一行小字：点、背包、通知，够用了。",
-          "revisit": "文档塔安静如故。规则没吓到你，世界反而更清楚了一点。"
+          "revisit": "文档塔安静如故。规则没吓到你，世界反而更清楚了一点。",
+          "loot": {
+            "item_id": "item_tide_knife",
+            "qty": 1,
+            "once": true
+          }
         },
         {
           "id": "spot_outskirts",

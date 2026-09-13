@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useAuth } from '../composables/useAuth'
-import { useGame } from '../composables/useGame'
+import { useGame, type GroundItem } from '../composables/useGame'
+import { actionsForTags } from '../utils/itemActions'
 
 const { user, refresh, isLoggedIn } = useAuth()
-const { world, loadWorld, visit } = useGame()
+const { world, loadWorld, visit, spotPut, spotConsume, spotUse } = useGame()
 const message = ref('')
 const error = ref('')
+const ground = ref<GroundItem | null>(null)
+const groundBusy = ref(false)
 
 const chaodeng = computed(() => world.value?.cities.find((c) => c.city === '潮灯市'))
+const groundActions = computed(() => actionsForTags(ground.value?.tags))
 
 onMounted(async () => {
   await refresh()
@@ -20,20 +24,52 @@ onMounted(async () => {
   if (user.value) {
     try {
       const r = await visit(user.value.city)
-      if (r.message) message.value = r.message
+      applyVisit(r.message, r.ground)
     } catch (e) {
       error.value = e instanceof Error ? e.message : '打卡失败'
     }
   }
 })
 
+function applyVisit(msg?: string, g?: GroundItem) {
+  if (msg) message.value = msg
+  ground.value = g?.available ? g : null
+}
+
 async function visitSpot(spotId: string) {
   error.value = ''
+  ground.value = null
   try {
     const r = await visit('潮灯市', spotId)
-    if (r.message) message.value = r.message
+    applyVisit(r.message, r.ground)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '打卡失败'
+  }
+}
+
+async function groundAction(kind: 'put' | 'consume' | 'use') {
+  if (!ground.value || groundBusy.value) return
+  groundBusy.value = true
+  error.value = ''
+  try {
+    const spotId = ground.value.spot_id
+    let msg = ''
+    if (kind === 'put') {
+      const r = await spotPut('潮灯市', spotId)
+      msg = r.message
+    } else if (kind === 'consume') {
+      const r = await spotConsume('潮灯市', spotId)
+      msg = r.message
+    } else {
+      const r = await spotUse('潮灯市', spotId)
+      msg = r.message
+    }
+    message.value = msg
+    ground.value = null
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '操作失败'
+  } finally {
+    groundBusy.value = false
   }
 }
 </script>
@@ -45,6 +81,43 @@ async function visitSpot(spotId: string) {
     <p v-if="user" class="mw-meta">你在 {{ user.city }} · {{ user.wallet_credits }} 点</p>
     <p v-if="message" class="mw-msg">{{ message }}</p>
     <p v-if="error" class="mw-err">{{ error }}</p>
+
+    <section v-if="ground" class="mw-ground">
+      <h2>眼前</h2>
+      <p class="mw-ground-item">
+        <strong>{{ ground.display }}</strong>
+        <span v-if="ground.qty > 1" class="mw-dim"> × {{ ground.qty }}</span>
+      </p>
+      <div class="mw-ground-actions">
+        <button
+          v-if="groundActions.consume"
+          type="button"
+          class="mw-act"
+          :disabled="groundBusy"
+          @click="groundAction('consume')"
+        >
+          食用
+        </button>
+        <button
+          v-if="groundActions.use"
+          type="button"
+          class="mw-act mw-act--secondary"
+          :disabled="groundBusy"
+          @click="groundAction('use')"
+        >
+          使用
+        </button>
+        <button
+          v-if="groundActions.put"
+          type="button"
+          class="mw-act mw-act--put"
+          :disabled="groundBusy"
+          @click="groundAction('put')"
+        >
+          放入背包
+        </button>
+      </div>
+    </section>
 
     <section v-if="chaodeng?.explore_spots?.length">
       <h2>逛点</h2>
@@ -101,6 +174,60 @@ async function visitSpot(spotId: string) {
 
 .mw-err {
   color: #c0392b;
+}
+
+.mw-ground {
+  margin: 1rem 0 1.25rem;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px dashed var(--vp-c-brand-1);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 5%, var(--vp-c-bg-elv));
+}
+
+.mw-ground h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  color: var(--vp-c-text-2);
+}
+
+.mw-ground-item {
+  margin: 0 0 0.75rem;
+}
+
+.mw-ground-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mw-act {
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--vp-c-brand-1);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mw-act--secondary {
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  border: 1px solid var(--vp-c-divider);
+}
+
+.mw-act--put {
+  background: var(--vp-c-bg-elv);
+  color: var(--vp-c-brand-1);
+  border: 1px solid var(--vp-c-brand-1);
+}
+
+.mw-act:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .mw-list {

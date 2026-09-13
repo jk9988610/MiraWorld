@@ -3,7 +3,21 @@
     {
       "id": "item_noodle_bowl",
       "display": "一碗面",
-      "tags": ["food", "consumable"]
+      "tags": ["food", "consumable"],
+      "consume_message": "面汤趁热喝完，空碗还留着一点雾港的咸。"
+    },
+    {
+      "id": "item_mist_snack",
+      "display": "雾港小食",
+      "tags": ["food", "consumable"],
+      "consume_message": "小食咸香，肚子暖了一点。"
+    },
+    {
+      "id": "item_tide_knife",
+      "display": "潮水小刀",
+      "tags": ["tool"],
+      "use_message": "你在刀背上敲了敲，听声还行。",
+      "consumes_on_use": false
     },
     {
       "id": "item_fog_wheat",
