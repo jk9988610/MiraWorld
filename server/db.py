@@ -124,6 +124,66 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS stacks (
+                player_id INTEGER NOT NULL,
+                item_id TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (player_id, item_id),
+                FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS orders (
+                id TEXT PRIMARY KEY,
+                buyer_id INTEGER NOT NULL,
+                seller_kind TEXT NOT NULL,
+                seller_id TEXT NOT NULL,
+                city TEXT NOT NULL,
+                offer_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                price_credits INTEGER NOT NULL,
+                escrow_credits INTEGER NOT NULL,
+                payload_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                to_player_id INTEGER NOT NULL,
+                from_kind TEXT NOT NULL,
+                from_id TEXT,
+                body TEXT NOT NULL,
+                ref_type TEXT,
+                ref_id TEXT,
+                read_at TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (to_player_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS ledger_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id INTEGER NOT NULL,
+                amount INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                ref_type TEXT,
+                ref_id TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
 
 
 def utc_now() -> str:
