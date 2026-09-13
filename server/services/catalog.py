@@ -16,6 +16,13 @@ def _active_offers() -> list[dict]:
     return _active_npc_offers() + active_player_offers_catalog()
 
 
+def active_offers(city: str | None = None) -> list[dict]:
+    offers = _active_offers()
+    if city:
+        offers = [o for o in offers if o.get("place", {}).get("city") == city]
+    return offers
+
+
 def get_offer(offer_id: str) -> dict:
     for offer in _active_offers():
         if offer["id"] == offer_id:

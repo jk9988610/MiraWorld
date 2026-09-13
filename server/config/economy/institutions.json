@@ -1,0 +1,45 @@
+{
+  "institutions": [
+    {
+      "id": "inst_chen_noodle",
+      "city": "潮灯市",
+      "kind": "noodle_house",
+      "display_name": "陈师傅面坊",
+      "owner_kind": "system",
+      "owner_id": "npc_chen",
+      "offer_id": "offer_standard_noodle",
+      "seed_capital": 50000,
+      "slots": [
+        { "job_type": "chef", "job_display": "厨师", "headcount": 2, "wage_per_capita": 12 },
+        { "job_type": "waiter", "job_display": "服务员", "headcount": 1, "wage_per_capita": 12 }
+      ]
+    },
+    {
+      "id": "inst_chaodeng_clinic",
+      "city": "潮灯市",
+      "kind": "clinic",
+      "display_name": "潮灯医馆",
+      "owner_kind": "system",
+      "owner_id": "npc_clinic",
+      "offer_id": null,
+      "seed_capital": 50000,
+      "slots": [
+        { "job_type": "doctor", "job_display": "医生", "headcount": 1, "wage_per_capita": 12 },
+        { "job_type": "clerk", "job_display": "账房", "headcount": 1, "wage_per_capita": 12 }
+      ]
+    },
+    {
+      "id": "inst_east_smithy",
+      "city": "潮灯市",
+      "kind": "smithy",
+      "display_name": "城东铁匠铺",
+      "owner_kind": "system",
+      "owner_id": "npc_smith",
+      "offer_id": null,
+      "seed_capital": 40000,
+      "slots": [
+        { "job_type": "blacksmith", "job_display": "铁匠", "headcount": 2, "wage_per_capita": 12 }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import time
 import uuid
 from http.cookiejar import CookieJar
 from urllib.error import HTTPError
+from urllib.parse import quote
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
 DEFAULT_BASE = "http://8.133.252.224/miraworld/api"
@@ -23,10 +24,54 @@ class DemoError(RuntimeError):
     pass
 
 
-def api(base: str, opener, method: str, path: str, body: dict | None = None) -> dict:
+def run_v20_once(base: str, run_index: int) -> None:
+    tick_secret = os.environ.get("MIRAWORLD_TICK_SECRET", "dev-tick-secret")
+    opener = build_opener()
+
+    health = api(base, opener, "GET", "/health")
+    if not health.get("ok"):
+        raise DemoError(f"health check failed: {health}")
+
+    status = api(base, opener, "GET", f"/economy/status?city={quote(CITY)}")
+    if not status.get("institutions"):
+        raise DemoError(f"economy not seeded: {status}")
+    if status.get("pop_groups", {}).get("count", 0) < 10:
+        raise DemoError(f"expected 10 pop groups, got {status.get('pop_groups')}")
+
+    tick = api(
+        base,
+        opener,
+        "POST",
+        f"/economy/tick?city={quote(CITY)}&force=1",
+        None,
+        extra_headers={"X-Tick-Secret": tick_secret},
+    )
+    if not tick.get("ok"):
+        raise DemoError(f"tick failed: {tick}")
+    purchases = (tick.get("summary") or {}).get("purchases", {}).get("count", 0)
+    if purchases < 1:
+        raise DemoError(f"expected pop purchases, got {tick}")
+
+    spotlight = api(base, opener, "GET", "/economy/institutions/inst_chen_noodle/spotlight")
+    items = spotlight.get("items") or []
+    if not items:
+        raise DemoError(f"expected spotlight entries, got {spotlight}")
+    if len(items) > 10:
+        raise DemoError(f"spotlight max 10, got {len(items)}")
+    name = items[0].get("display_name", "")
+    job = items[0].get("job_display", "")
+    if not name.endswith(job):
+        raise DemoError(f"spotlight name should end with job: {name} / {job}")
+
+    print(f"  v2.0 run {run_index}: OK purchases={purchases} spotlight={len(items)}", flush=True)
+
+
+def api(base: str, opener, method: str, path: str, body: dict | None = None, extra_headers: dict | None = None) -> dict:
     url = f"{base.rstrip('/')}{path}"
     data = None
     headers = {"Accept": "application/json"}
+    if extra_headers:
+        headers.update(extra_headers)
     if body is not None:
         data = json.dumps(body, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -410,6 +455,11 @@ def main() -> int:
         help="Number of full demo passes (default: 5)",
     )
     parser.add_argument(
+        "--v20",
+        action="store_true",
+        help="Run v2.0 economy tick demo",
+    )
+    parser.add_argument(
         "--v15",
         action="store_true",
         help="Run v1.5 bounty demo",
@@ -441,7 +491,10 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    if args.v15:
+    if args.v20:
+        label = "v2.0 economy"
+        runner = run_v20_once
+    elif args.v15:
         label = "v1.5 bounty"
         runner = run_v15_once
     elif args.v14:

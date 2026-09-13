@@ -9,7 +9,9 @@ class OrderBody(BaseModel):
 
 class OrderPublic(BaseModel):
     id: str
-    buyer_id: int
+    buyer_kind: str = "player"
+    buyer_id: int | None = None
+    buyer_group_id: str | None = None
     seller_kind: str
     seller_id: str
     city: str

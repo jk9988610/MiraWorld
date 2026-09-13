@@ -29,9 +29,12 @@ def _order_copy(section: str, key: str, **kwargs: str) -> str:
 
 
 def _row_to_order(row: sqlite3.Row, offer_display: str = "", item_id: str = "", item_qty: int = 0) -> OrderPublic:
+    keys = row.keys()
     return OrderPublic(
         id=row["id"],
+        buyer_kind=row["buyer_kind"] if "buyer_kind" in keys else "player",
         buyer_id=row["buyer_id"],
+        buyer_group_id=row["buyer_group_id"] if "buyer_group_id" in keys else None,
         seller_kind=row["seller_kind"],
         seller_id=row["seller_id"],
         city=row["city"],
@@ -140,7 +143,7 @@ def _public_from_row(row: sqlite3.Row) -> OrderPublic:
 def _get_order_row(conn: sqlite3.Connection, order_id: str) -> sqlite3.Row | None:
     return conn.execute(
         """
-        SELECT id, buyer_id, seller_kind, seller_id, city, offer_id, status,
+        SELECT id, buyer_kind, buyer_id, buyer_group_id, seller_kind, seller_id, city, offer_id, status,
                price_credits, escrow_credits, payload_json, created_at, updated_at
         FROM orders WHERE id = ?
         """,
@@ -223,9 +226,9 @@ def place_order(player_id: int, offer_id: str) -> OrderPublic:
         conn.execute(
             """
             INSERT INTO orders (
-                id, buyer_id, seller_kind, seller_id, city, offer_id, status,
+                id, buyer_kind, buyer_id, buyer_group_id, seller_kind, seller_id, city, offer_id, status,
                 price_credits, escrow_credits, payload_json, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, 'escrowed', ?, ?, ?, ?, ?)
+            ) VALUES (?, 'player', ?, NULL, ?, ?, ?, ?, 'escrowed', ?, ?, ?, ?, ?)
             """,
             (
                 order_id,
@@ -301,7 +304,7 @@ def list_orders(player_id: int) -> OrderListResponse:
     with db() as conn:
         rows = conn.execute(
             """
-            SELECT id, buyer_id, seller_kind, seller_id, city, offer_id, status,
+            SELECT id, buyer_kind, buyer_id, buyer_group_id, seller_kind, seller_id, city, offer_id, status,
                    price_credits, escrow_credits, payload_json, created_at, updated_at
             FROM orders
             WHERE buyer_id = ?
@@ -317,7 +320,7 @@ def list_selling_orders(player_id: int) -> OrderListResponse:
     with db() as conn:
         rows = conn.execute(
             """
-            SELECT id, buyer_id, seller_kind, seller_id, city, offer_id, status,
+            SELECT id, buyer_kind, buyer_id, buyer_group_id, seller_kind, seller_id, city, offer_id, status,
                    price_credits, escrow_credits, payload_json, created_at, updated_at
             FROM orders
             WHERE seller_kind = 'player' AND seller_id = ?

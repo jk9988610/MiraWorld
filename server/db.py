@@ -265,6 +265,161 @@ def init_db() -> None:
         if "qty" not in bounty_cols:
             conn.execute("ALTER TABLE bounties ADD COLUMN qty INTEGER NOT NULL DEFAULT 1")
 
+        _migrate_orders_v20(conn)
+        _create_economy_tables(conn)
+        _seed_economy_if_empty(conn)
+
+
+def _migrate_orders_v20(conn: sqlite3.Connection) -> None:
+    cols = _columns(conn, "orders")
+    if "buyer_kind" in cols:
+        return
+    conn.execute(
+        """
+        CREATE TABLE orders_v20 (
+            id TEXT PRIMARY KEY,
+            buyer_kind TEXT NOT NULL DEFAULT 'player',
+            buyer_id INTEGER,
+            buyer_group_id TEXT,
+            seller_kind TEXT NOT NULL,
+            seller_id TEXT NOT NULL,
+            city TEXT NOT NULL,
+            offer_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            price_credits INTEGER NOT NULL,
+            escrow_credits INTEGER NOT NULL,
+            payload_json TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO orders_v20 (
+            id, buyer_kind, buyer_id, buyer_group_id, seller_kind, seller_id, city,
+            offer_id, status, price_credits, escrow_credits, payload_json,
+            created_at, updated_at
+        )
+        SELECT
+            id, 'player', buyer_id, NULL, seller_kind, seller_id, city,
+            offer_id, status, price_credits, escrow_credits, payload_json,
+            created_at, updated_at
+        FROM orders
+        """
+    )
+    conn.execute("DROP TABLE orders")
+    conn.execute("ALTER TABLE orders_v20 RENAME TO orders")
+
+
+def _create_economy_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS institutions (
+            id TEXT PRIMARY KEY,
+            city TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            owner_kind TEXT NOT NULL,
+            owner_id TEXT NOT NULL,
+            offer_id TEXT,
+            wallet_credits INTEGER NOT NULL DEFAULT 0,
+            open INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS institution_slots (
+            id TEXT PRIMARY KEY,
+            institution_id TEXT NOT NULL,
+            job_type TEXT NOT NULL,
+            job_display TEXT NOT NULL,
+            headcount INTEGER NOT NULL DEFAULT 1,
+            wage_per_capita INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pop_groups (
+            id TEXT PRIMARY KEY,
+            city TEXT NOT NULL,
+            headcount INTEGER NOT NULL DEFAULT 1000,
+            wallet_credits INTEGER NOT NULL DEFAULT 0,
+            primary_institution_id TEXT,
+            job_type TEXT,
+            job_display TEXT,
+            pref_json TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (primary_institution_id) REFERENCES institutions(id) ON DELETE SET NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS city_welfare_fund (
+            city TEXT PRIMARY KEY,
+            balance INTEGER NOT NULL DEFAULT 0,
+            last_grant_date TEXT,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS economy_ledger (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_kind TEXT NOT NULL,
+            account_id TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            ref_type TEXT,
+            ref_id TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS spotlight_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            institution_id TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            job_display TEXT NOT NULL,
+            pop_group_id TEXT NOT NULL,
+            order_id TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE,
+            FOREIGN KEY (pop_group_id) REFERENCES pop_groups(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS economy_ticks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            city TEXT NOT NULL,
+            tick_date TEXT NOT NULL,
+            status TEXT NOT NULL,
+            summary_json TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            UNIQUE (city, tick_date)
+        )
+        """
+    )
+
+
+def _seed_economy_if_empty(conn: sqlite3.Connection) -> None:
+    from services.economy.seed import seed_economy
+
+    seed_economy(conn)
+
 
 def utc_now() -> str:
     return datetime.now(UTC).isoformat()
