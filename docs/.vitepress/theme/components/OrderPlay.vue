@@ -6,8 +6,8 @@ import { useGame, type OrderData } from '../composables/useGame'
 const STATUS_LABEL: Record<string, string> = {
   escrowed: '已托管',
   processing: '制作中',
-  ready: '可以取餐',
-  completed: '已取餐',
+  ready: '可以收进背包',
+  completed: '已收进背包',
   settled: '已完成',
 }
 
@@ -48,7 +48,7 @@ async function pickup() {
     order.value = await pickupOrder(order.value.id)
     await refresh()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '取餐失败'
+    error.value = e instanceof Error ? e.message : '收进背包失败'
   } finally {
     picking.value = false
   }
@@ -68,7 +68,7 @@ async function pickup() {
         <li :class="{ done: true }">下单 · 托管 {{ order.price_credits }} 点</li>
         <li :class="{ done: order.status !== 'escrowed' }">厨房制作</li>
         <li :class="{ done: ['ready', 'completed', 'settled'].includes(order.status) }">面好了</li>
-        <li :class="{ done: order.status === 'settled' }">取餐入背包</li>
+        <li :class="{ done: order.status === 'settled' }">确认收进背包</li>
       </ol>
 
       <button
@@ -78,9 +78,9 @@ async function pickup() {
         :disabled="picking"
         @click="pickup"
       >
-        {{ picking ? '取餐中…' : '取餐' }}
+        {{ picking ? '收进背包中…' : '确认收进背包' }}
       </button>
-      <p v-else-if="order.status === 'settled'" class="mw-msg">已取餐，去背包看看。</p>
+      <p v-else-if="order.status === 'settled'" class="mw-msg">已收进背包，去背包看看。</p>
 
       <p class="mw-meta">余额 {{ user.wallet_credits }} 点</p>
     </template>
