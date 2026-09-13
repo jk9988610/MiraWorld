@@ -58,6 +58,19 @@
     "shop_as_entity": "npc or player actor as seller",
     "district": "spot flavor only",
     "wallet_silver": "wallet_credits",
-    "lamp_oil_money": "wallet_credits"
-  }
+    "lamp_oil_money": "wallet_credits",
+    "pickup_ui": "确认收进背包",
+    "取餐": "确认收进背包",
+    "信箱": "通知",
+    "inventory": "stack",
+    "consume_food_ui": "食用",
+    "use_tool_ui": "使用",
+    "put_to_stack_ui": "放入背包"
+  },
+  "player_actions": {
+    "PUT_TO_STACK": { "ui_cn": "放入背包", "applies": "item outside stack" },
+    "CONFIRM_RECEIVE": { "ui_cn": "确认收进背包", "applies": "order ready", "api": "pickup" },
+    "CONSUME": { "ui_cn": "食用", "tags": ["food", "consumable"] },
+    "USE": { "ui_cn": "使用", "tags": ["tool"] }
+  },
 }
