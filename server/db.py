@@ -231,6 +231,26 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS bounties (
+                id TEXT PRIMARY KEY,
+                issuer_id INTEGER NOT NULL,
+                worker_id INTEGER,
+                city TEXT NOT NULL DEFAULT '潮灯市',
+                title TEXT NOT NULL,
+                body TEXT NOT NULL DEFAULT '',
+                price_credits INTEGER NOT NULL,
+                escrow_credits INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                payload_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (issuer_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (worker_id) REFERENCES users(id) ON DELETE SET NULL
+            )
+            """
+        )
 
 
 def utc_now() -> str:

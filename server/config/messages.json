@@ -12,5 +12,10 @@
   },
   "npc_from_display": {
     "npc_chen": "陈师傅"
+  },
+  "bounty": {
+    "issuer_taken": "「{worker}」接了你的委托「{title}」。",
+    "issuer_submitted": "「{worker}」交差了「{title}」，去确认交差。",
+    "worker_settled": "委托「{title}」已确认交差，收到 {price} 点。"
   }
 }
