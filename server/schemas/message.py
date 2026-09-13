@@ -16,3 +16,7 @@ class MessagePublic(BaseModel):
 
 class MessageListResponse(BaseModel):
     messages: list[MessagePublic]
+
+
+class MessageSummaryResponse(BaseModel):
+    unread_count: int

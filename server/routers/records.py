@@ -3,10 +3,10 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 
 from deps import get_current_player
-from schemas.message import MessageListResponse, MessagePublic
+from schemas.message import MessageListResponse, MessagePublic, MessageSummaryResponse
 from schemas.order import OrderBody, OrderListResponse, OrderPublic
 from schemas.player import PlayerPublic
-from services.messages import list_messages, mark_read
+from services.messages import list_messages, mark_read, unread_count
 from services.orders import get_order, list_orders, pickup_order, place_order
 
 router = APIRouter(tags=["records"])
@@ -39,6 +39,13 @@ def order_pickup(
     player: PlayerPublic = Depends(get_current_player),
 ) -> OrderPublic:
     return pickup_order(player.id, order_id)
+
+
+@router.get("/records/messages/summary", response_model=MessageSummaryResponse)
+def messages_summary(
+    player: PlayerPublic = Depends(get_current_player),
+) -> MessageSummaryResponse:
+    return MessageSummaryResponse(unread_count=unread_count(player.id))
 
 
 @router.get("/records/messages", response_model=MessageListResponse)

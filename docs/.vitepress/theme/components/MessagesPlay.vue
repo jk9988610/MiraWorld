@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useGame, type MessageData } from '../composables/useGame'
+import { refreshUnreadCount } from '../composables/useShellState'
 
 const { refresh, isLoggedIn } = useAuth()
 const { loadMessages, markMessageRead } = useGame()
@@ -17,6 +18,7 @@ onMounted(async () => {
   try {
     const data = await loadMessages()
     messages.value = data.messages
+    await refreshUnreadCount()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载通知失败'
   }
@@ -32,6 +34,7 @@ async function openMessage(msg: MessageData) {
   try {
     await markMessageRead(msg.id)
     msg.read_at = new Date().toISOString()
+    await refreshUnreadCount()
     if (msg.ref_type === 'order' && msg.ref_id) {
       window.location.href = `/miraworld/play/order.html?id=${encodeURIComponent(msg.ref_id)}`
     }
@@ -77,17 +80,20 @@ async function openMessage(msg: MessageData) {
 .mw-msg-btn {
   width: 100%;
   text-align: left;
-  padding: 0.75rem 1rem;
+  min-height: 48px;
+  padding: 0.85rem 1rem;
   margin-bottom: 0.5rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
   background: var(--vp-c-bg-elv);
   cursor: pointer;
   font: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 li.unread .mw-msg-btn {
   border-left: 3px solid var(--vp-c-brand-1);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 6%, var(--vp-c-bg-elv));
 }
 
 .mw-body {
