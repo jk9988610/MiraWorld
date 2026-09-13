@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Deploy MiraWorld VitePress dist to admin@8.133.252.224 via SSH.
+"""Upload pre-built VitePress dist from this VM to admin@8.133.252.224 via SSH.
+
+Run locally (Cloud Agent VM):
+  npm run docs:build
+  npm run deploy
+
+This script only copies static files to /var/www/html/miraworld/.
+One-time server bootstrap (nginx/auth) lives in deploy/bootstrap-on-server.sh
+and is NOT run on every deploy.
 
 Auth priority:
 1. MIRAWORLD_SSH_PRIVATE_KEY env (PEM/OpenSSH private key text)
@@ -28,12 +36,6 @@ REMOTE_TMP_PREFIX = "/tmp/miraworld-dist"
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "docs" / ".vitepress" / "dist"
-NGINX_CONF = ROOT / "deploy" / "nginx-miraworld.conf"
-SETUP_NGINX = ROOT / "deploy" / "setup-nginx.sh"
-SERVER_DIR = ROOT / "server"
-SETUP_AUTH = ROOT / "deploy" / "setup-auth.sh"
-AUTH_SERVICE = ROOT / "deploy" / "miraworld-auth.service"
-REMOTE_AUTH_SRC = "/tmp/miraworld-auth-src"
 
 
 def _resolve_key_path() -> Path | None:
@@ -53,7 +55,6 @@ def _materialize_env_key() -> tuple[Path | None, Path | None]:
     raw = os.environ.get(SSH_KEY_ENV, "").strip()
     if not raw:
         return None, None
-    # Normalize escaped newlines from some secret UIs
     if "\\n" in raw and "\n" not in raw:
         raw = raw.replace("\\n", "\n")
     if not raw.endswith("\n"):
@@ -155,20 +156,18 @@ def sftp_mkdirs(sftp: paramiko.SFTPClient, remote: str) -> None:
 
 
 def upload_dir(sftp: paramiko.SFTPClient, local: Path, remote: str) -> None:
+    files = [p for p in local.rglob("*") if p.is_file()]
+    total = len(files)
+    print(f"Uploading {total} files -> {remote}")
     sftp_mkdirs(sftp, remote)
-    for path in local.rglob("*"):
+    for idx, path in enumerate(files, start=1):
         rel = path.relative_to(local).as_posix()
         target = posixpath.join(remote, rel)
-        if path.is_dir():
-            try:
-                sftp.stat(target)
-            except OSError as exc:
-                if not _sftp_missing(exc):
-                    raise
-                sftp.mkdir(target)
-        else:
-            sftp_mkdirs(sftp, posixpath.dirname(target))
-            sftp.put(str(path), target)
+        sftp_mkdirs(sftp, posixpath.dirname(target))
+        sftp.put(str(path), target)
+        if idx == 1 or idx == total or idx % 25 == 0:
+            print(f"  [{idx}/{total}] {rel}")
+    print(f"Upload complete ({total} files)")
 
 
 def main() -> int:
@@ -183,38 +182,10 @@ def main() -> int:
         run(client, f"mkdir -p {remote_tmp}")
         sftp = client.open_sftp()
         try:
-            print(f"Uploading {DIST} -> {remote_tmp}")
             upload_dir(sftp, DIST, remote_tmp)
-            upload_dir(sftp, SERVER_DIR, REMOTE_AUTH_SRC)
-            sftp.put(str(NGINX_CONF), "/tmp/nginx-miraworld.conf")
-            sftp.put(str(SETUP_NGINX), "/tmp/setup-nginx.sh")
-            sftp.put(str(SETUP_AUTH), "/tmp/setup-auth.sh")
-            sftp.put(str(AUTH_SERVICE), "/tmp/miraworld-auth.service")
-            jwt_secret = os.environ.get("MIRAWORLD_JWT_SECRET", "").strip()
-            if jwt_secret:
-                fd, auth_env_path = tempfile.mkstemp(prefix="miraworld_auth_", suffix=".env")
-                try:
-                    with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
-                        f.write(
-                            "MIRAWORLD_ENV=production\n"
-                            "MIRAWORLD_DB=/var/lib/miraworld/miraworld.db\n"
-                            f"MIRAWORLD_JWT_SECRET={jwt_secret}\n"
-                        )
-                    sftp.put(auth_env_path, "/tmp/miraworld-auth.env")
-                finally:
-                    Path(auth_env_path).unlink(missing_ok=True)
         finally:
             sftp.close()
 
-        auth_env_copy = ""
-        if os.environ.get("MIRAWORLD_JWT_SECRET", "").strip():
-            auth_env_copy = """
-sudo mkdir -p /etc/miraworld
-sudo cp /tmp/miraworld-auth.env /etc/miraworld/auth.env
-sudo chmod 600 /etc/miraworld/auth.env
-"""
-
-        # Copy site files BEFORE setup-nginx.sh reloads nginx (avoids /miraworld/ 404 race).
         setup = f"""
 set -e
 sudo mkdir -p {REMOTE_ROOT}
@@ -222,15 +193,10 @@ sudo find {REMOTE_ROOT} -mindepth 1 -delete
 sudo cp -a {remote_tmp}/. {REMOTE_ROOT}/
 sudo rm -rf {remote_tmp}
 sudo chown -R www-data:www-data {REMOTE_ROOT}
-chmod +x /tmp/setup-nginx.sh
-chmod +x /tmp/setup-auth.sh
-{auth_env_copy}
-sudo bash /tmp/setup-auth.sh
-sudo bash /tmp/setup-nginx.sh /tmp/nginx-miraworld.conf
 echo DEPLOY_OK
-curl -sI http://127.0.0.1/miraworld/ | head -n 8
-curl -s http://127.0.0.1/miraworld/api/health
+curl -sI http://127.0.0.1/miraworld/ | head -n 5
 """
+        print("Publishing static files on server (copy only, no apt/python setup)...")
         run(client, setup)
         print(f"Done. Open http://{HOST}/miraworld/")
         return 0

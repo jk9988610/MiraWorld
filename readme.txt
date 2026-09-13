@@ -13,7 +13,14 @@ Cursor → Cloud Agents → Environment → Secrets:
   MIRAWORLD_SSH_PRIVATE_KEY = jk9988610.pem 完整内容
 新开的 Agent 会话才会注入；deploy.py 只使用该密钥。
 
---- 部署到 IP 子路径 /miraworld/ ---
+--- 部署到 IP 子路径 /miraworld/（两步，不要合并）---
+npm run docs:build
+npm run deploy
+
+deploy 只在 Cloud Agent VM 里用 Python 上传 dist；不会在云服务器上跑 apt/python 安装。
+首次 nginx 引导见 bootstrap-on-server.sh（服务器上执行一次即可）。
+
+--- 旧：服务器端 tar 更新（可选）---
 阿里云网页终端:
   curl -fsSL https://github.com/jk9988610/MiraWorld/releases/download/miraworld-web/bootstrap-on-server.sh | sed 's/\r$//' | bash
 
