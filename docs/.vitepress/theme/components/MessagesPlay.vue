@@ -57,7 +57,7 @@ async function openMessage(msg: MessageData) {
         </button>
       </li>
     </ul>
-    <p v-else class="mw-dim">还没有通知。点面取餐后，陈师傅会在这里提醒你。</p>
+    <p v-else class="mw-dim">还没有通知。点面确认收进背包后，陈师傅会在这里提醒你。</p>
   </div>
 </template>
 
