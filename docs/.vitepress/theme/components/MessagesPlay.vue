@@ -25,19 +25,25 @@ onMounted(async () => {
 })
 
 async function openMessage(msg: MessageData) {
+  const bountyHref =
+    msg.ref_type === 'bounty' && msg.ref_id
+      ? `/miraworld/play/bounties.html`
+      : null
+  const orderHref =
+    msg.ref_type === 'order' && msg.ref_id
+      ? `/miraworld/play/order.html?id=${encodeURIComponent(msg.ref_id)}`
+      : null
+  const target = bountyHref || orderHref
+
   if (msg.read_at) {
-    if (msg.ref_type === 'order' && msg.ref_id) {
-      window.location.href = `/miraworld/play/order.html?id=${encodeURIComponent(msg.ref_id)}`
-    }
+    if (target) window.location.href = target
     return
   }
   try {
     await markMessageRead(msg.id)
     msg.read_at = new Date().toISOString()
     await refreshUnreadCount()
-    if (msg.ref_type === 'order' && msg.ref_id) {
-      window.location.href = `/miraworld/play/order.html?id=${encodeURIComponent(msg.ref_id)}`
-    }
+    if (target) window.location.href = target
   } catch {
     /* ignore */
   }

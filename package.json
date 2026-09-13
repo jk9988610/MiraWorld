@@ -14,7 +14,8 @@
     "backup:db:cron": "python3 -u deploy/backup_db.py --install-cron",
     "smoke:demo": "python3 -u deploy/smoke_demo.py",
     "smoke:shop": "python3 -u deploy/smoke_demo.py --v12",
-    "smoke:auto": "python3 -u deploy/smoke_demo.py --v14"
+    "smoke:auto": "python3 -u deploy/smoke_demo.py --v14",
+    "smoke:bounty": "python3 -u deploy/smoke_demo.py --v15"
   },
   "devDependencies": {
     "vitepress": "^1.6.3"

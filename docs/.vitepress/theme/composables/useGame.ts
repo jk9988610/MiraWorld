@@ -111,6 +111,22 @@ export interface MarketShopData {
   offers: PlayerOfferData[]
 }
 
+export interface BountyData {
+  id: string
+  issuer_id: number
+  issuer_handle: string
+  worker_id?: number | null
+  worker_handle: string
+  city: string
+  title: string
+  body: string
+  price_credits: number
+  status: string
+  in_person: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface StackData {
   item_id: string
   display: string
@@ -326,6 +342,62 @@ export function useGame() {
     return parseJson<{ shops: MarketShopData[] }>(res)
   }
 
+  async function loadBounties(city = '潮灯市') {
+    const res = await fetch(
+      `${API_BASE}/bounties?city=${encodeURIComponent(city)}`,
+      { credentials: 'include' },
+    )
+    return parseJson<{ open: BountyData[]; issued: BountyData[]; taken: BountyData[] }>(res)
+  }
+
+  async function createBounty(body: {
+    title: string
+    body?: string
+    price_credits: number
+    city?: string
+    in_person?: boolean
+  }) {
+    const res = await fetch(`${API_BASE}/bounties`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    return parseJson<BountyData>(res)
+  }
+
+  async function takeBounty(bountyId: string) {
+    const res = await fetch(`${API_BASE}/bounties/${encodeURIComponent(bountyId)}/take`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<BountyData>(res)
+  }
+
+  async function submitBounty(bountyId: string) {
+    const res = await fetch(`${API_BASE}/bounties/${encodeURIComponent(bountyId)}/submit`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<BountyData>(res)
+  }
+
+  async function settleBounty(bountyId: string) {
+    const res = await fetch(`${API_BASE}/bounties/${encodeURIComponent(bountyId)}/settle`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<BountyData>(res)
+  }
+
+  async function cancelBounty(bountyId: string) {
+    const res = await fetch(`${API_BASE}/bounties/${encodeURIComponent(bountyId)}/cancel`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<BountyData>(res)
+  }
+
   async function loadSellingOrders() {
     const res = await fetch(`${API_BASE}/records/orders/selling`, { credentials: 'include' })
     return parseJson<{ orders: OrderData[] }>(res)
@@ -380,6 +452,12 @@ export function useGame() {
     createShopOffer,
     toggleShopOffer,
     loadMarket,
+    loadBounties,
+    createBounty,
+    takeBounty,
+    submitBounty,
+    settleBounty,
+    cancelBounty,
     loadSellingOrders,
     acceptOrder,
     markOrderReady,

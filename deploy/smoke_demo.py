@@ -278,6 +278,120 @@ def run_v14_once(base: str, run_index: int) -> None:
     )
 
 
+def run_v15_once(base: str, run_index: int) -> None:
+    suffix = uuid.uuid4().hex[:6]
+    issuer_handle = f"委{suffix[:4]}"
+    worker_handle = f"接{suffix[2:]}"
+
+    issuer_jar = CookieJar()
+    issuer_opener = build_opener(HTTPCookieProcessor(issuer_jar))
+    worker_jar = CookieJar()
+    worker_opener = build_opener(HTTPCookieProcessor(worker_jar))
+
+    api(
+        base,
+        issuer_opener,
+        "POST",
+        "/auth/register",
+        {"handle": issuer_handle, "password": PASSWORD},
+    )
+    api(
+        base,
+        worker_opener,
+        "POST",
+        "/auth/register",
+        {"handle": worker_handle, "password": PASSWORD},
+    )
+
+    bounty = api(
+        base,
+        issuer_opener,
+        "POST",
+        "/bounties",
+        {
+            "title": f"线索{run_index}",
+            "body": "晚霞岸附近",
+            "price_credits": 50,
+            "in_person": False,
+        },
+    )
+    if bounty.get("status") != "open":
+        raise DemoError(f"bounty should be open, got {bounty.get('status')}")
+    bounty_id = bounty["id"]
+
+    issuer_after_create = api(base, issuer_opener, "GET", "/me")
+    if issuer_after_create.get("wallet_credits") != 250:
+        raise DemoError(
+            f"issuer wallet expected 250 after escrow, got {issuer_after_create.get('wallet_credits')}"
+        )
+
+    taken = api(base, worker_opener, "POST", f"/bounties/{bounty_id}/take", None)
+    if taken.get("status") != "taken":
+        raise DemoError(f"take expected taken, got {taken.get('status')}")
+
+    issuer_msgs = api(base, issuer_opener, "GET", "/records/messages")
+    if not any(m.get("ref_type") == "bounty" for m in (issuer_msgs.get("messages") or [])):
+        raise DemoError("异步委托：发单人应收到接单通知")
+
+    submitted = api(base, worker_opener, "POST", f"/bounties/{bounty_id}/submit", None)
+    if submitted.get("status") != "submitted":
+        raise DemoError(f"submit expected submitted, got {submitted.get('status')}")
+
+    settled = api(base, issuer_opener, "POST", f"/bounties/{bounty_id}/settle", None)
+    if settled.get("status") != "settled":
+        raise DemoError(f"settle expected settled, got {settled.get('status')}")
+
+    worker_me = api(base, worker_opener, "GET", "/me")
+    issuer_me = api(base, issuer_opener, "GET", "/me")
+    if worker_me.get("wallet_credits") != 350:
+        raise DemoError(f"worker wallet expected 350, got {worker_me.get('wallet_credits')}")
+    if issuer_me.get("wallet_credits") != 250:
+        raise DemoError(f"issuer wallet expected 250, got {issuer_me.get('wallet_credits')}")
+
+    cancel_bounty = api(
+        base,
+        issuer_opener,
+        "POST",
+        "/bounties",
+        {"title": "待取消", "price_credits": 20, "in_person": True},
+    )
+    cancel_id = cancel_bounty["id"]
+    cancelled = api(base, issuer_opener, "POST", f"/bounties/{cancel_id}/cancel", None)
+    if cancelled.get("status") != "cancelled":
+        raise DemoError(f"cancel expected cancelled, got {cancelled.get('status')}")
+    issuer_after_cancel = api(base, issuer_opener, "GET", "/me")
+    if issuer_after_cancel.get("wallet_credits") != 250:
+        raise DemoError(
+            f"issuer wallet expected 250 after cancel refund, got {issuer_after_cancel.get('wallet_credits')}"
+        )
+
+    in_person = api(
+        base,
+        issuer_opener,
+        "POST",
+        "/bounties",
+        {"title": "当面单", "price_credits": 10, "in_person": True},
+    )
+    in_person_id = in_person["id"]
+    api(base, worker_opener, "POST", f"/bounties/{in_person_id}/take", None)
+    api(base, worker_opener, "POST", f"/bounties/{in_person_id}/submit", None)
+    api(base, issuer_opener, "POST", f"/bounties/{in_person_id}/settle", None)
+
+    issuer_msgs2 = api(base, issuer_opener, "GET", "/records/messages")
+    in_person_msgs = [
+        m
+        for m in (issuer_msgs2.get("messages") or [])
+        if m.get("ref_type") == "bounty" and m.get("ref_id") == in_person_id
+    ]
+    if in_person_msgs:
+        raise DemoError("当面交差：不应有 bounty 通知")
+
+    print(
+        f"  v1.5 run {run_index}: OK issuer={issuer_handle} worker={worker_handle}",
+        flush=True,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="MiraWorld MVP smoke demo (HTTP)")
     parser.add_argument(
@@ -286,6 +400,11 @@ def main() -> int:
         type=int,
         default=5,
         help="Number of full demo passes (default: 5)",
+    )
+    parser.add_argument(
+        "--v15",
+        action="store_true",
+        help="Run v1.5 bounty demo",
     )
     parser.add_argument(
         "--v14",
@@ -314,7 +433,10 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    if args.v14:
+    if args.v15:
+        label = "v1.5 bounty"
+        runner = run_v15_once
+    elif args.v14:
         label = "v1.4 auto"
         runner = run_v14_once
     elif args.v12:

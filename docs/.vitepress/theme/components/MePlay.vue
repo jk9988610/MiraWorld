@@ -67,6 +67,12 @@ async function saveBio() {
       v1.2 可在潮灯市挂自己的面。
       <a href="/miraworld/play/my-shop.html">→ 我的店</a>
     </p>
+
+    <h2>我要</h2>
+    <p>
+      v1.5 可发悬赏委托，别人自愿接单交差。
+      <a href="/miraworld/play/bounties.html">→ 悬赏栏</a>
+    </p>
   </div>
 </template>
 

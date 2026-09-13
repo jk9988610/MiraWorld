@@ -44,6 +44,7 @@ export default defineConfig({
           { text: '潮灯市', link: '/play/city' },
           { text: '陈师傅', link: '/play/chen' },
           { text: '我的店', link: '/play/my-shop' },
+          { text: '悬赏栏', link: '/play/bounties' },
           { text: '通知', link: '/play/messages' },
           { text: '背包', link: '/play/stacks' },
           { text: '我的', link: '/play/me' },
