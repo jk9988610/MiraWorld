@@ -20,6 +20,7 @@ const {
   loadShopMe,
   applyShop,
   setShopOpen,
+  setShopAuto,
   createShopOffer,
   toggleShopOffer,
   loadSellingOrders,
@@ -70,6 +71,19 @@ async function doApply() {
     await reload()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '开店失败'
+  } finally {
+    busy.value = false
+  }
+}
+
+async function toggleAuto() {
+  if (!data.value?.shop || busy.value) return
+  busy.value = true
+  try {
+    await setShopAuto(!data.value.shop.auto_on)
+    await reload()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '操作失败'
   } finally {
     busy.value = false
   }
@@ -179,11 +193,15 @@ async function sendMsg() {
     </template>
 
     <template v-else>
-      <p><strong>{{ data.shop.display_name }}</strong> · {{ data.shop.open ? '营业中' : '歇业' }}</p>
+      <p><strong>{{ data.shop.display_name }}</strong> · {{ data.shop.open ? '营业中' : '歇业' }}<template v-if="data.shop.auto_on"> · 当班中</template></p>
       <p class="mw-meta">余额 {{ user.wallet_credits }} 点</p>
       <button type="button" class="mw-btn mw-btn--secondary" :disabled="busy" @click="toggleOpen">
         {{ data.shop.open ? '暂停营业' : '开始营业' }}
       </button>
+      <button type="button" class="mw-btn mw-btn--secondary" :disabled="busy" @click="toggleAuto">
+        {{ data.shop.auto_on ? '关闭当班（手动接单）' : '开启当班（自动接单）' }}
+      </button>
+      <p class="mw-dim">当面点单不会发通知；当班开启后离线也能自动接单并标记好了（异步单仍会通知买家）。</p>
 
       <h2>挂单</h2>
       <ul v-if="data.offers.length" class="mw-list">

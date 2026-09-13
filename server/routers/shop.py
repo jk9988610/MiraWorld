@@ -18,6 +18,7 @@ from services.shops import (
     get_my_shop_payload,
     list_market,
     set_offer_active,
+    set_shop_auto,
     set_shop_open,
 )
 
@@ -66,6 +67,14 @@ def shop_toggle_offer(
     player: PlayerPublic = Depends(get_current_player),
 ) -> PlayerOfferPublic:
     return set_offer_active(player.id, offer_id, active)
+
+
+@router.patch("/auto", response_model=ShopPublic)
+def shop_toggle_auto(
+    auto_on: bool,
+    player: PlayerPublic = Depends(get_current_player),
+) -> ShopPublic:
+    return set_shop_auto(player.id, auto_on)
 
 
 @router.get("/market", response_model=MarketResponse)

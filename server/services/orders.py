@@ -13,7 +13,7 @@ from services.catalog import get_offer, item_display
 from services.inventory import add_stack
 from services.messages import create_message
 from services.players import get_player_by_id
-from services.shops import seller_display
+from services.shops import seller_display, shop_auto_on
 
 
 def _order_copy(section: str, key: str, **kwargs: str) -> str:
@@ -53,6 +53,79 @@ def _offer_meta(offer: dict) -> tuple[str, str, int]:
     item_id = gives.get("item_id", "")
     item_qty = int(gives.get("qty", 1))
     return display, item_id, item_qty
+
+
+def _payload_dict(row: sqlite3.Row) -> dict:
+    return json.loads(row["payload_json"] or "{}")
+
+
+def _notify_buyer(payload: dict) -> bool:
+    """当面点单/收物：不发通知给买家。"""
+    return not bool(payload.get("in_person"))
+
+
+def _make_payload(display: str, item_id: str, item_qty: int, in_person: bool) -> str:
+    return json.dumps(
+        {
+            "display": display,
+            "item_id": item_id,
+            "item_qty": item_qty,
+            "in_person": in_person,
+        }
+    )
+
+
+def _notify_buyer_ready(
+    conn: sqlite3.Connection,
+    *,
+    buyer_id: int,
+    seller_kind: str,
+    seller_id: str,
+    display: str,
+    order_id: str,
+    payload: dict,
+) -> None:
+    if not _notify_buyer(payload):
+        return
+    if seller_kind == "npc":
+        body = _order_copy("order", "ready", display=display)
+        from_kind, from_id = "npc", seller_id
+    else:
+        body = _order_copy("player_order", "buyer_ready", display=display)
+        from_kind, from_id = "player", seller_id
+    create_message(
+        conn,
+        to_player_id=buyer_id,
+        from_kind=from_kind,
+        from_id=from_id,
+        body=body,
+        ref_type="order",
+        ref_id=order_id,
+    )
+
+
+def _player_order_to_ready(
+    conn: sqlite3.Connection,
+    order_id: str,
+    seller_id: int,
+    row: sqlite3.Row,
+) -> None:
+    now = utc_now()
+    conn.execute(
+        "UPDATE orders SET status = 'ready', updated_at = ? WHERE id = ?",
+        (now, order_id),
+    )
+    payload = _payload_dict(row)
+    display = payload.get("display", "")
+    _notify_buyer_ready(
+        conn,
+        buyer_id=row["buyer_id"],
+        seller_kind="player",
+        seller_id=str(seller_id),
+        display=display,
+        order_id=order_id,
+        payload=payload,
+    )
 
 
 def _payload_meta(row: sqlite3.Row) -> tuple[str, str, int]:
@@ -124,7 +197,7 @@ def _add_ledger(
     )
 
 
-def place_order(player_id: int, offer_id: str) -> OrderPublic:
+def place_order(player_id: int, offer_id: str, in_person: bool = False) -> OrderPublic:
     offer = get_offer(offer_id)
     price = int(offer["price_credits"])
     seller = offer.get("seller", {})
@@ -138,7 +211,8 @@ def place_order(player_id: int, offer_id: str) -> OrderPublic:
 
     order_id = f"ord_{uuid.uuid4().hex[:12]}"
     now = utc_now()
-    payload = json.dumps({"display": display, "item_id": item_id, "item_qty": item_qty})
+    face_to_face = in_person or seller_kind == "npc"
+    payload = _make_payload(display, item_id, item_qty, face_to_face)
     seller_name = seller.get("display") or seller_display(seller_kind, seller_id)
 
     with db() as conn:
@@ -180,46 +254,30 @@ def place_order(player_id: int, offer_id: str) -> OrderPublic:
         )
 
         if seller_kind == "npc":
-            create_message(
-                conn,
-                to_player_id=player_id,
-                from_kind="npc",
-                from_id=seller_id,
-                body=_order_copy("order", "received", display=display),
-                ref_type="order",
-                ref_id=order_id,
-            )
             ready_at = utc_now()
             conn.execute(
                 "UPDATE orders SET status = 'ready', updated_at = ? WHERE id = ?",
                 (ready_at, order_id),
             )
-            create_message(
-                conn,
-                to_player_id=player_id,
-                from_kind="npc",
-                from_id=seller_id,
-                body=_order_copy("order", "ready", display=display),
-                ref_type="order",
-                ref_id=order_id,
-            )
             _add_ledger(conn, player_id, 0, "settle", "order", order_id)
         else:
             buyer = get_player_by_id(player_id)
-            create_message(
-                conn,
-                to_player_id=player_id,
-                from_kind="player",
-                from_id=seller_id,
-                body=_order_copy(
-                    "player_order",
-                    "buyer_received",
-                    display=display,
-                    shop=seller_name,
-                ),
-                ref_type="order",
-                ref_id=order_id,
-            )
+            payload_dict = json.loads(payload)
+            if _notify_buyer(payload_dict):
+                create_message(
+                    conn,
+                    to_player_id=player_id,
+                    from_kind="player",
+                    from_id=seller_id,
+                    body=_order_copy(
+                        "player_order",
+                        "buyer_received",
+                        display=display,
+                        shop=seller_name,
+                    ),
+                    ref_type="order",
+                    ref_id=order_id,
+                )
             create_message(
                 conn,
                 to_player_id=int(seller_id),
@@ -234,6 +292,10 @@ def place_order(player_id: int, offer_id: str) -> OrderPublic:
                 ref_type="order",
                 ref_id=order_id,
             )
+            row_after = _get_order_row(conn, order_id)
+            assert row_after is not None
+            if shop_auto_on(conn, int(seller_id)):
+                _player_order_to_ready(conn, order_id, int(seller_id), row_after)
 
         row = _get_buyer_order_row(conn, order_id, player_id)
 
@@ -291,15 +353,17 @@ def accept_order(seller_id: int, order_id: str) -> OrderPublic:
             "UPDATE orders SET status = 'processing', updated_at = ? WHERE id = ?",
             (now, order_id),
         )
-        create_message(
-            conn,
-            to_player_id=row["buyer_id"],
-            from_kind="player",
-            from_id=str(seller_id),
-            body=_order_copy("player_order", "buyer_accepted", display=display),
-            ref_type="order",
-            ref_id=order_id,
-        )
+        payload = _payload_dict(row)
+        if _notify_buyer(payload):
+            create_message(
+                conn,
+                to_player_id=row["buyer_id"],
+                from_kind="player",
+                from_id=str(seller_id),
+                body=_order_copy("player_order", "buyer_accepted", display=display),
+                ref_type="order",
+                ref_id=order_id,
+            )
         row = _get_seller_order_row(conn, order_id, seller_id)
     return _public_from_row(row)
 
@@ -315,14 +379,15 @@ def mark_order_ready(seller_id: int, order_id: str) -> OrderPublic:
             "UPDATE orders SET status = 'ready', updated_at = ? WHERE id = ?",
             (now, order_id),
         )
-        create_message(
+        payload = _payload_dict(row)
+        _notify_buyer_ready(
             conn,
-            to_player_id=row["buyer_id"],
-            from_kind="player",
-            from_id=str(seller_id),
-            body=_order_copy("player_order", "buyer_ready", display=display),
-            ref_type="order",
-            ref_id=order_id,
+            buyer_id=row["buyer_id"],
+            seller_kind="player",
+            seller_id=str(seller_id),
+            display=display,
+            order_id=order_id,
+            payload=payload,
         )
         row = _get_seller_order_row(conn, order_id, seller_id)
     return _public_from_row(row)

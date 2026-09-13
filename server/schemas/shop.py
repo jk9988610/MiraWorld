@@ -13,6 +13,7 @@ class ShopPublic(BaseModel):
     display_name: str
     city: str
     open: bool
+    auto_on: bool = False
     created_at: str
 
 

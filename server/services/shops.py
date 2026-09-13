@@ -39,6 +39,7 @@ def _shop_row(row: sqlite3.Row, handle: str) -> ShopPublic:
         display_name=row["display_name"],
         city=row["city"],
         open=bool(row["open"]),
+        auto_on=bool(row["auto_on"]) if "auto_on" in row.keys() else False,
         created_at=row["created_at"],
     )
 
@@ -56,7 +57,7 @@ def _validate_sellable_item(item_id: str) -> dict:
 def get_shop(player_id: int) -> ShopPublic | None:
     with db() as conn:
         row = conn.execute(
-            "SELECT player_id, display_name, city, open, created_at FROM shops WHERE player_id = ?",
+            "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",
             (player_id,),
         ).fetchone()
         if row is None:
@@ -110,7 +111,7 @@ def apply_shop(player_id: int, display_name: str) -> ShopPublic:
             (player_id, display_name.strip(), now),
         )
         row = conn.execute(
-            "SELECT player_id, display_name, city, open, created_at FROM shops WHERE player_id = ?",
+            "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",
             (player_id,),
         ).fetchone()
     assert row is not None
@@ -120,7 +121,7 @@ def apply_shop(player_id: int, display_name: str) -> ShopPublic:
 def set_shop_open(player_id: int, open_: bool) -> ShopPublic:
     with db() as conn:
         row = conn.execute(
-            "SELECT player_id, display_name, city, open, created_at FROM shops WHERE player_id = ?",
+            "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",
             (player_id,),
         ).fetchone()
         if row is None:
@@ -131,11 +132,40 @@ def set_shop_open(player_id: int, open_: bool) -> ShopPublic:
         )
         user = conn.execute("SELECT handle FROM users WHERE id = ?", (player_id,)).fetchone()
         row = conn.execute(
-            "SELECT player_id, display_name, city, open, created_at FROM shops WHERE player_id = ?",
+            "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",
             (player_id,),
         ).fetchone()
     assert row is not None
     return _shop_row(row, user["handle"] if user else str(player_id))
+
+
+def set_shop_auto(player_id: int, auto_on: bool) -> ShopPublic:
+    with db() as conn:
+        row = conn.execute(
+            "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",
+            (player_id,),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="还没有店，先申请开店")
+        conn.execute(
+            "UPDATE shops SET auto_on = ? WHERE player_id = ?",
+            (1 if auto_on else 0, player_id),
+        )
+        user = conn.execute("SELECT handle FROM users WHERE id = ?", (player_id,)).fetchone()
+        row = conn.execute(
+            "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",
+            (player_id,),
+        ).fetchone()
+    assert row is not None
+    return _shop_row(row, user["handle"] if user else str(player_id))
+
+
+def shop_auto_on(conn: sqlite3.Connection, seller_id: int) -> bool:
+    row = conn.execute(
+        "SELECT auto_on FROM shops WHERE player_id = ?",
+        (seller_id,),
+    ).fetchone()
+    return bool(row and row["auto_on"])
 
 
 def list_my_offers(player_id: int) -> list[PlayerOfferPublic]:

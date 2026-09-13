@@ -93,8 +93,9 @@ def run_once(base: str, run_index: int) -> None:
 
     msgs = api(base, opener, "GET", "/records/messages")
     message_list = msgs.get("messages") or []
-    if len(message_list) < 2:
-        raise DemoError(f"expected >=2 messages, got {len(message_list)}")
+    order_msgs = [m for m in message_list if m.get("ref_type") == "order"]
+    if order_msgs:
+        raise DemoError(f"当面点面不应有订单通知，got {len(order_msgs)}")
 
     summary = api(base, opener, "GET", "/records/messages/summary")
     if "unread_count" not in summary:
@@ -160,10 +161,17 @@ def run_v12_once(base: str, run_index: int) -> None:
     if not offer_id:
         raise DemoError(f"create offer failed: {offer}")
 
-    order = api(base, buyer_opener, "POST", "/records/order", {"offer_id": offer_id})
+    order = api(base, buyer_opener, "POST", "/records/order", {"offer_id": offer_id, "in_person": True})
     if order.get("status") != "escrowed":
         raise DemoError(f"player order should be escrowed, got {order.get('status')}")
     order_id = order["id"]
+
+    buyer_msgs = api(base, buyer_opener, "GET", "/records/messages")
+    buyer_order_msgs = [
+        m for m in (buyer_msgs.get("messages") or []) if m.get("ref_type") == "order"
+    ]
+    if buyer_order_msgs:
+        raise DemoError(f"当面点单买家不应收到订单通知: {buyer_order_msgs}")
 
     accepted = api(base, seller_opener, "POST", f"/records/orders/{order_id}/accept", None)
     if accepted.get("status") != "processing":
@@ -200,6 +208,76 @@ def run_v12_once(base: str, run_index: int) -> None:
     )
 
 
+def run_v14_once(base: str, run_index: int) -> None:
+    suffix = uuid.uuid4().hex[:6]
+    seller_handle = f"班{suffix[:4]}"
+    buyer_handle = f"客{suffix[2:]}"
+
+    seller_jar = CookieJar()
+    seller_opener = build_opener(HTTPCookieProcessor(seller_jar))
+    buyer_jar = CookieJar()
+    buyer_opener = build_opener(HTTPCookieProcessor(buyer_jar))
+
+    api(
+        base,
+        seller_opener,
+        "POST",
+        "/auth/register",
+        {"handle": seller_handle, "password": PASSWORD},
+    )
+    api(
+        base,
+        buyer_opener,
+        "POST",
+        "/auth/register",
+        {"handle": buyer_handle, "password": PASSWORD},
+    )
+    api(
+        base,
+        seller_opener,
+        "POST",
+        "/shop/apply",
+        {"display_name": f"当班{run_index}号"},
+    )
+    offer = api(
+        base,
+        seller_opener,
+        "POST",
+        "/shop/offers",
+        {
+            "item_id": "item_noodle_bowl",
+            "display": "当班汤面",
+            "price_credits": 10,
+        },
+    )
+    offer_id = offer["id"]
+    api(base, seller_opener, "PATCH", "/shop/auto?auto_on=true")
+
+    order = api(
+        base,
+        buyer_opener,
+        "POST",
+        "/records/order",
+        {"offer_id": offer_id, "in_person": True},
+    )
+    if order.get("status") != "ready":
+        raise DemoError(f"auto_on order should be ready, got {order.get('status')}")
+    order_id = order["id"]
+
+    buyer_msgs = api(base, buyer_opener, "GET", "/records/messages")
+    if any(m.get("ref_type") == "order" for m in (buyer_msgs.get("messages") or [])):
+        raise DemoError("当班+当面：买家不应收到订单通知")
+
+    settled = api(base, buyer_opener, "POST", f"/records/orders/{order_id}/pickup", None)
+    if settled.get("status") != "settled":
+        raise DemoError(f"pickup expected settled, got {settled.get('status')}")
+
+    print(
+        f"  v1.4 run {run_index}: OK auto seller={seller_handle} buyer={buyer_handle}",
+        flush=True,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="MiraWorld MVP smoke demo (HTTP)")
     parser.add_argument(
@@ -208,6 +286,11 @@ def main() -> int:
         type=int,
         default=5,
         help="Number of full demo passes (default: 5)",
+    )
+    parser.add_argument(
+        "--v14",
+        action="store_true",
+        help="Run v1.4 auto_on shop demo",
     )
     parser.add_argument(
         "--v12",
@@ -231,9 +314,16 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    label = "v1.2 shop" if args.v12 else "v1.0 MVP"
+    if args.v14:
+        label = "v1.4 auto"
+        runner = run_v14_once
+    elif args.v12:
+        label = "v1.2 shop"
+        runner = run_v12_once
+    else:
+        label = "v1.0 MVP"
+        runner = run_once
     print(f"Smoke demo ({label}): {args.runs} run(s) -> {base}", flush=True)
-    runner = run_v12_once if args.v12 else run_once
     for i in range(1, args.runs + 1):
         runner(base, i)
         if i < args.runs and args.pause > 0:

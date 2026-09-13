@@ -205,11 +205,17 @@ def init_db() -> None:
                 display_name TEXT NOT NULL,
                 city TEXT NOT NULL DEFAULT '潮灯市',
                 open INTEGER NOT NULL DEFAULT 1,
+                auto_on INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
             )
             """
         )
+        shop_cols = _columns(conn, "shops")
+        if "auto_on" not in shop_cols:
+            conn.execute(
+                "ALTER TABLE shops ADD COLUMN auto_on INTEGER NOT NULL DEFAULT 0"
+            )
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS player_offers (

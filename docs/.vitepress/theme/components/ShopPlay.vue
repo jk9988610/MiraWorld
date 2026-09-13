@@ -40,7 +40,7 @@ async function order(offer: PlayerOfferData) {
   ordering.value = true
   error.value = ''
   try {
-    const o = await placeOrder(offer.id)
+    const o = await placeOrder(offer.id, true)
     await refresh()
     window.location.href = `/miraworld/play/order.html?id=${encodeURIComponent(o.id)}`
   } catch (e) {

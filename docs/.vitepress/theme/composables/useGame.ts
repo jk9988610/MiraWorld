@@ -82,6 +82,7 @@ export interface ShopData {
   display_name: string
   city: string
   open: boolean
+  auto_on: boolean
   created_at: string
 }
 
@@ -204,12 +205,12 @@ export function useGame() {
     return parseJson<CatalogData>(res)
   }
 
-  async function placeOrder(offerId: string) {
+  async function placeOrder(offerId: string, inPerson = false) {
     const res = await fetch(`${API_BASE}/records/order`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ offer_id: offerId }),
+      body: JSON.stringify({ offer_id: offerId, in_person: inPerson }),
     })
     return parseJson<OrderData>(res)
   }
@@ -280,6 +281,14 @@ export function useGame() {
 
   async function setShopOpen(isOpen: boolean) {
     const res = await fetch(`${API_BASE}/shop/open?is_open=${isOpen ? 'true' : 'false'}`, {
+      method: 'PATCH',
+      credentials: 'include',
+    })
+    return parseJson<ShopData>(res)
+  }
+
+  async function setShopAuto(autoOn: boolean) {
+    const res = await fetch(`${API_BASE}/shop/auto?auto_on=${autoOn ? 'true' : 'false'}`, {
       method: 'PATCH',
       credentials: 'include',
     })
@@ -367,6 +376,7 @@ export function useGame() {
     loadShopMe,
     applyShop,
     setShopOpen,
+    setShopAuto,
     createShopOffer,
     toggleShopOffer,
     loadMarket,
