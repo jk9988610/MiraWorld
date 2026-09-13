@@ -11,7 +11,7 @@ JWT_SECRET = os.environ.get("MIRAWORLD_JWT_SECRET", "dev-secret-change-me")
 JWT_ALG = "HS256"
 JWT_EXP_HOURS = int(os.environ.get("MIRAWORLD_JWT_EXP_HOURS", "72"))
 COOKIE_NAME = "miraworld_session"
-COOKIE_PATH = "/miraworld/"
+COOKIE_PATH = os.environ.get("MIRAWORLD_COOKIE_PATH", "/miraworld/")
 
 
 def hash_password(password: str) -> bytes:

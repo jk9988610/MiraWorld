@@ -5,11 +5,12 @@ import { useGame, type GroundItem } from '../composables/useGame'
 import { actionsForTags } from '../utils/itemActions'
 
 const { user, refresh, isLoggedIn } = useAuth()
-const { world, loadWorld, visit, spotPut, spotConsume, spotUse } = useGame()
+const { world, loadWorld, visit, spotPut, spotConsume, spotUse, loadMarket } = useGame()
 const message = ref('')
 const error = ref('')
 const ground = ref<GroundItem | null>(null)
 const groundBusy = ref(false)
+const playerShops = ref<Array<{ player_id: number; display_name: string; handle: string }>>([])
 
 const chaodeng = computed(() => world.value?.cities.find((c) => c.city === '潮灯市'))
 const groundActions = computed(() => actionsForTags(ground.value?.tags))
@@ -21,6 +22,16 @@ onMounted(async () => {
     return
   }
   await loadWorld()
+  try {
+    const market = await loadMarket()
+    playerShops.value = market.shops.map((s) => ({
+      player_id: s.player_id,
+      display_name: s.display_name,
+      handle: s.handle,
+    }))
+  } catch {
+    /* ignore */
+  }
   if (user.value) {
     try {
       const r = await visit(user.value.city)
@@ -127,6 +138,18 @@ async function groundAction(kind: 'put' | 'consume' | 'use') {
             {{ s.name }}
             <small v-if="s.flavor">{{ s.flavor }}</small>
           </button>
+        </li>
+      </ul>
+    </section>
+
+    <section v-if="playerShops.length">
+      <h2>玩家店</h2>
+      <ul class="mw-list">
+        <li v-for="s in playerShops" :key="s.player_id">
+          <a :href="`/miraworld/play/shop.html?id=${s.player_id}`">
+            {{ s.display_name }}
+          </a>
+          <span class="mw-dim"> · {{ s.handle }}</span>
         </li>
       </ul>
     </section>

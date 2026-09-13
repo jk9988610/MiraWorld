@@ -61,6 +61,12 @@ async function saveBio() {
       还没有足迹。去<a href="/miraworld/play/city.html">潮灯市地图</a>打卡，
       逛点里每个地方都有第一次到访的小句子。
     </p>
+
+    <h2>开店</h2>
+    <p>
+      v1.2 可在潮灯市挂自己的面。
+      <a href="/miraworld/play/my-shop.html">→ 我的店</a>
+    </p>
   </div>
 </template>
 

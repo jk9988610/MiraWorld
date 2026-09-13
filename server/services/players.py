@@ -32,6 +32,21 @@ def _visit_count(conn: sqlite3.Connection, player_id: int) -> int:
     return int(row["c"]) if row else 0
 
 
+def get_player_by_handle(handle: str) -> PlayerPublic:
+    handle_clean = handle.strip()
+    with db() as conn:
+        row = conn.execute(
+            """
+            SELECT id, handle, email, city, wallet_credits, bio, created_at
+            FROM users WHERE handle = ? COLLATE NOCASE
+            """,
+            (handle_clean,),
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="找不到这个行者")
+        return _row_to_player(row, _visit_count(conn, row["id"]))
+
+
 def get_player_by_id(player_id: int) -> PlayerPublic:
     with db() as conn:
         row = conn.execute(

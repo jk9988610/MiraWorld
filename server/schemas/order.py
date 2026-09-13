@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 class OrderBody(BaseModel):
     offer_id: str = Field(min_length=1, max_length=64)
+    in_person: bool = False
 
 
 class OrderPublic(BaseModel):
