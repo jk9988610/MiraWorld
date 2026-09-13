@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useGame, type CatalogOffer } from '../composables/useGame'
+import SpotlightPanel from './SpotlightPanel.vue'
 
 const { user, refresh, isLoggedIn } = useAuth()
 const { loadCatalog, placeOrder, loadWorld, world } = useGame()
@@ -71,6 +72,8 @@ async function order(offer: CatalogOffer) {
       </li>
     </ul>
     <p v-else class="mw-dim">灶还没热。过会儿再来看看，或先回<a href="/miraworld/play/city.html">潮灯市</a>转转。</p>
+
+    <SpotlightPanel institution-id="inst_chen_noodle" title="面坊来客" />
 
     <p class="mw-back">
       <a href="/miraworld/play/city.html">← 回潮灯市地图</a>

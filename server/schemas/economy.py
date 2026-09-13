@@ -27,6 +27,7 @@ class EconomyStatusResponse(BaseModel):
     pop_groups: dict
     welfare_fund: dict | None
     last_tick: dict | None
+    dashboard: dict
     config: dict
 
 
