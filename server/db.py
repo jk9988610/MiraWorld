@@ -267,6 +267,7 @@ def init_db() -> None:
 
         _migrate_orders_v20(conn)
         _create_economy_tables(conn)
+        _run_v20_p3_migrations(conn)
         _seed_economy_if_empty(conn)
 
 
@@ -413,6 +414,49 @@ def _create_economy_tables(conn: sqlite3.Connection) -> None:
         )
         """
     )
+
+
+def _ensure_app_meta(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+        """
+    )
+
+
+def _meta_done(conn: sqlite3.Connection, key: str) -> bool:
+    row = conn.execute("SELECT 1 FROM app_meta WHERE key = ?", (key,)).fetchone()
+    return row is not None
+
+
+def _meta_set(conn: sqlite3.Connection, key: str, value: str = "1") -> None:
+    conn.execute(
+        "INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)",
+        (key, value),
+    )
+
+
+def _run_v20_p3_migrations(conn: sqlite3.Connection) -> None:
+    _ensure_app_meta(conn)
+    if not _meta_done(conn, "spotlight_flush_v3"):
+        conn.execute("DELETE FROM spotlight_entries")
+        _meta_set(conn, "spotlight_flush_v3")
+    if not _meta_done(conn, "pop_unemployed_pg09_pg10"):
+        conn.execute(
+            """
+            UPDATE pop_groups
+            SET primary_institution_id = NULL,
+                job_type = NULL,
+                job_display = NULL,
+                updated_at = ?
+            WHERE id IN ('pg_09', 'pg_10')
+            """,
+            (utc_now(),),
+        )
+        _meta_set(conn, "pop_unemployed_pg09_pg10")
 
 
 def _seed_economy_if_empty(conn: sqlite3.Connection) -> None:

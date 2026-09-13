@@ -106,6 +106,10 @@ title: 怎么玩
 | **无岗市民** | **最低生活补贴**（8 点/人/日，城市福利基金） |
 | **在岗工人** | **最低工资**（12 点/人/日，机构发薪） |
 
-查询：`GET /economy/status` · 聚光灯：`GET /shop/inst_chen_noodle/spotlight`
+查询：`GET /economy/status` · 验收：`GET /economy/audit` · 聚光灯：`GET /shop/inst_chen_noodle/spotlight`
+
+**Spotlight 来客：** `王厨师` 格式（姓+职业，一条显示，职业来自机构 slot）。
 
 **UI：** [城市经营](/play/economy.html) 仪表盘 · 陈师傅页 Spotlight 来客列表
+
+**运维：** 日 tick cron → `npm run economy:cron`；清理 smoke 测试号 → `npm run purge:test-accounts`

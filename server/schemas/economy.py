@@ -31,6 +31,12 @@ class EconomyStatusResponse(BaseModel):
     config: dict
 
 
+class EconomyAuditResponse(BaseModel):
+    ok: bool
+    city: str
+    checks: dict
+
+
 class EconomyTickResponse(BaseModel):
     ok: bool
     city: str

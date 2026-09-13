@@ -5,7 +5,13 @@ import os
 from fastapi import APIRouter, Header, HTTPException
 
 from db import db
-from schemas.economy import EconomyStatusResponse, EconomyTickResponse, SpotlightResponse
+from schemas.economy import (
+    EconomyAuditResponse,
+    EconomyStatusResponse,
+    EconomyTickResponse,
+    SpotlightResponse,
+)
+from services.economy.audit import audit_economy
 from services.economy.spotlight import list_spotlight
 from services.economy.tick import get_economy_status, run_daily_tick
 
@@ -22,6 +28,11 @@ def _verify_tick_secret(secret: str | None) -> None:
 @router.get("/status", response_model=EconomyStatusResponse)
 def economy_status(city: str = "潮灯市") -> dict:
     return get_economy_status(city)
+
+
+@router.get("/audit", response_model=EconomyAuditResponse)
+def economy_audit(city: str = "潮灯市") -> dict:
+    return audit_economy(city)
 
 
 @router.post("/tick", response_model=EconomyTickResponse)
