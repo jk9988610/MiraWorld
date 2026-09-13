@@ -7,10 +7,12 @@ from schemas.capital import (
     CapitalStatusResponse,
     CompanyCreateBody,
     CompanyPublic,
+    CompanyTransferBody,
+    CompanyTransferResponse,
     DailyInvestmentResponse,
 )
 from schemas.player import PlayerPublic
-from services.capital.company import create_company
+from services.capital.company import create_company, transfer_company_funds
 from services.capital.investment import claim_daily_investment, get_capital_status
 
 router = APIRouter(prefix="/capital", tags=["capital"])
@@ -32,3 +34,11 @@ def register_company(
     player: PlayerPublic = Depends(get_current_player),
 ) -> dict:
     return create_company(player.id, body.display_name)
+
+
+@router.post("/company/transfer", response_model=CompanyTransferResponse)
+def company_transfer(
+    body: CompanyTransferBody,
+    player: PlayerPublic = Depends(get_current_player),
+) -> dict:
+    return transfer_company_funds(player.id, body.direction, body.amount)

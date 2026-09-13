@@ -194,6 +194,8 @@ export interface EconomyStatus {
 export interface CapitalStatus {
   assets: {
     wallet_credits: number
+    company_wallet: number
+    institution_wallet: number
     shop_value: number
     inventory_value: number
     total: number
@@ -203,7 +205,17 @@ export interface CapitalStatus {
     display_name: string
     city: string
     owner_player_id: number
+    wallet_credits: number
     created_at: string
+    institutions: Array<{
+      id: string
+      display_name: string
+      kind: string
+      wallet_credits: number
+      open: boolean
+      owner_kind: string
+      owner_id: string
+    }>
   } | null
   has_shop: boolean
   last_grant: {
@@ -546,6 +558,16 @@ export function useGame() {
     return parseJson<NonNullable<CapitalStatus['company']>>(res)
   }
 
+  async function transferCompanyFunds(direction: 'to_company' | 'to_player', amount: number) {
+    const res = await fetch(`${API_BASE}/capital/company/transfer`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ direction, amount }),
+    })
+    return parseJson<{ ok: boolean; wallet_credits: number; company_wallet: number }>(res)
+  }
+
   return {
     world,
     loadWorld,
@@ -584,5 +606,6 @@ export function useGame() {
     loadCapitalStatus,
     claimDailyInvestment,
     createCompany,
+    transferCompanyFunds,
   }
 }

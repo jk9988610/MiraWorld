@@ -4,13 +4,14 @@ import { useAuth } from '../composables/useAuth'
 import { useGame, type CapitalStatus } from '../composables/useGame'
 
 const { user, refresh, isLoggedIn } = useAuth()
-const { loadCapitalStatus, claimDailyInvestment, createCompany } = useGame()
+const { loadCapitalStatus, claimDailyInvestment, createCompany, transferCompanyFunds } = useGame()
 const status = ref<CapitalStatus | null>(null)
 const error = ref('')
 const message = ref('')
 const loading = ref(true)
 const busy = ref(false)
 const companyName = ref('')
+const transferAmount = ref(1000)
 
 onMounted(async () => {
   await refresh()
@@ -67,6 +68,23 @@ async function onCreateCompany() {
   }
 }
 
+async function onTransfer(direction: 'to_company' | 'to_player') {
+  if (busy.value || transferAmount.value <= 0) return
+  busy.value = true
+  message.value = ''
+  error.value = ''
+  try {
+    await transferCompanyFunds(direction, transferAmount.value)
+    message.value = direction === 'to_company' ? '已划入公司账' : '已划回个人钱包'
+    await reload()
+    await refresh()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '划转失败'
+  } finally {
+    busy.value = false
+  }
+}
+
 function fmt(n: number | undefined) {
   return (n ?? 0).toLocaleString('zh-CN')
 }
@@ -85,7 +103,7 @@ function fmt(n: number | undefined) {
         <div class="mw-card">
           <span class="mw-label">总资产</span>
           <strong>{{ fmt(status.assets.total) }} 点</strong>
-          <small>钱包 {{ fmt(status.assets.wallet_credits) }} · 店 {{ fmt(status.assets.shop_value) }} · 货 {{ fmt(status.assets.inventory_value) }}</small>
+          <small>个人 {{ fmt(status.assets.wallet_credits) }} · 公司 {{ fmt(status.assets.company_wallet) }} · 机构 {{ fmt(status.assets.institution_wallet) }} · 店 {{ fmt(status.assets.shop_value) }} · 货 {{ fmt(status.assets.inventory_value) }}</small>
         </div>
         <div class="mw-card">
           <span class="mw-label">日投公式</span>
@@ -106,7 +124,23 @@ function fmt(n: number | undefined) {
 
       <section class="mw-company">
         <h2>公司层</h2>
-        <p v-if="status.company" class="mw-ok">已登记：<strong>{{ status.company.display_name }}</strong></p>
+        <p v-if="status.company" class="mw-ok">
+          已登记：<strong>{{ status.company.display_name }}</strong>
+          · 公司账 {{ fmt(status.company.wallet_credits) }} 点
+        </p>
+        <template v-if="status.company">
+          <ul v-if="status.company.institutions.length" class="mw-inst">
+            <li v-for="inst in status.company.institutions" :key="inst.id">
+              <strong>{{ inst.display_name }}</strong>
+              <span class="mw-dim"> · {{ inst.wallet_credits }} 点</span>
+            </li>
+          </ul>
+          <p class="mw-form">
+            <input v-model.number="transferAmount" type="number" min="1" placeholder="点数" />
+            <button type="button" class="mw-btn" :disabled="busy" @click="onTransfer('to_company')">划入公司</button>
+            <button type="button" class="mw-btn mw-btn--ghost" :disabled="busy" @click="onTransfer('to_player')">划回个人</button>
+          </p>
+        </template>
         <template v-else>
           <p class="mw-dim">登记公司后，你的店会挂到公司名下（一玩家一公司）。</p>
           <p class="mw-form">
@@ -196,6 +230,24 @@ function fmt(n: number | undefined) {
 .mw-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.mw-btn--ghost {
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  border: 1px solid var(--vp-c-divider);
+}
+
+.mw-inst {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+}
+
+.mw-inst li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--vp-c-divider);
+  font-size: 0.875rem;
 }
 
 .mw-company h2 {

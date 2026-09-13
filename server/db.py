@@ -269,6 +269,7 @@ def init_db() -> None:
         _create_economy_tables(conn)
         _run_v20_p3_migrations(conn)
         _create_v21_capital_tables(conn)
+        _migrate_v21_p2_company(conn)
         _seed_economy_if_empty(conn)
 
 
@@ -328,6 +329,7 @@ def _create_economy_tables(conn: sqlite3.Connection) -> None:
             offer_id TEXT,
             wallet_credits INTEGER NOT NULL DEFAULT 0,
             open INTEGER NOT NULL DEFAULT 1,
+            company_id TEXT,
             created_at TEXT NOT NULL
         )
         """
@@ -468,6 +470,7 @@ def _create_v21_capital_tables(conn: sqlite3.Connection) -> None:
             owner_player_id INTEGER NOT NULL UNIQUE,
             display_name TEXT NOT NULL,
             city TEXT NOT NULL,
+            wallet_credits INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             FOREIGN KEY (owner_player_id) REFERENCES users(id) ON DELETE CASCADE
         )
@@ -491,6 +494,37 @@ def _create_v21_capital_tables(conn: sqlite3.Connection) -> None:
     shop_cols = _columns(conn, "shops")
     if "company_id" not in shop_cols:
         conn.execute("ALTER TABLE shops ADD COLUMN company_id TEXT")
+
+
+def _migrate_v21_p2_company(conn: sqlite3.Connection) -> None:
+    from services.capital.institution import ensure_player_shop_institution
+
+    _ensure_app_meta(conn)
+    company_cols = _columns(conn, "companies")
+    if company_cols and "wallet_credits" not in company_cols:
+        conn.execute(
+            "ALTER TABLE companies ADD COLUMN wallet_credits INTEGER NOT NULL DEFAULT 0"
+        )
+    inst_cols = _columns(conn, "institutions")
+    if inst_cols and "company_id" not in inst_cols:
+        conn.execute("ALTER TABLE institutions ADD COLUMN company_id TEXT")
+
+    if not _meta_done(conn, "player_shop_institutions"):
+        shops = conn.execute(
+            """
+            SELECT s.player_id, s.display_name, s.city, s.company_id
+            FROM shops s
+            """
+        ).fetchall()
+        for shop in shops:
+            ensure_player_shop_institution(
+                conn,
+                player_id=int(shop["player_id"]),
+                display_name=shop["display_name"],
+                city=shop["city"],
+                company_id=shop["company_id"],
+            )
+        _meta_set(conn, "player_shop_institutions")
 
 
 def _seed_economy_if_empty(conn: sqlite3.Connection) -> None:
