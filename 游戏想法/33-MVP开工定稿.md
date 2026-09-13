@@ -2,16 +2,16 @@
 
 > 状态：**开发唯一执行清单**  
 > 记录时间：2026-09-13  
-> 上位规范：[32-四象统一定稿](./32-四象统一定稿.md) · [34-品牌命名与版本规划](./34-品牌命名与版本规划.md)  
+> 上位规范：[32-四象统一定稿](./32-四象统一定稿.md) · [34-品牌命名与版本规划](./34-品牌命名与版本规划.md) · [35-简化原则定稿](./35-简化原则定稿.md)  
 > 品牌：**MiraWorld**（中文见 `34`）
 
 ---
 
 ## 一、MVP 一句话
 
-**在潮灯市注册 → 打卡 → 找陈师傅点标准汤面（15 点）→ 取餐进背包 → 读系统通知。**
+**在潮灯市注册 → 打卡 → 陈师傅点标准汤面（15 点）→ 通知 → 确认收进背包。**
 
-三支柱：**探索 · 点菜 · 通知**。无主线、无弹窗、无提现。
+三支柱：**探索 · 点菜 · 通知**。无主线、无弹窗、无提现、**无配送链**（见 [35-简化原则定稿](./35-简化原则定稿.md)）。
 
 ---
 
@@ -46,9 +46,9 @@
 1. 注册 handle「测试旅人」→ 落在潮灯市，余额 300 点
 2. 地图 → 打卡潮灯市（可选：晚霞岸 spot 彩蛋）
 3. 找陈师傅 → 看到 offer「标准汤面 · 15 点」
-4. 下单 → order 状态 escrowed → processing → ready
-5. 取餐 → stack +1 一碗面；余额 285 点
-6. 通知列表 → 一条 message「面好了」
+4. 下单 → 扣 15 点托管 → 通知「面好了」
+5. 确认收进背包 → stack +1 一碗面；余额 285 点
+6. 通知列表 → 同一条 message 可点进订单
 7. /me → 显示 handle、市、余额、打卡记录
 ```
 
@@ -81,20 +81,19 @@
 - [x] `records` 分表或统一表：`orders`, `messages`, `visits`, `ledger_entries`
 - [x] `GET /api/catalog` → items + offers
 - [x] `POST /api/records/order` 下单（校验余额 → escrow → ledger）
-- [x] 订单状态机：`created → escrowed → processing → ready → completed → settled`
-- [x] NPC 厨房：processing 可定时/即时 → ready
-- [x] `POST /api/records/order/{id}/pickup` 取餐 → stack +1
+- [x] 订单：`escrowed → ready`（厨房即时）；玩家 **确认收货** → `settled` + stack
+- [x] `POST /api/records/order/{id}/pickup` 确认收进背包（非「配送送达」）
 - [x] `GET /api/records/messages` 系统通知
 - [x] 分账 ledger（陈师傅份额可合并进平台或记 payload，MVP 简化为 platform fee 一行）
 - [x] 页面：陈师傅菜单、订单详情、通知、背包
 
 ### Phase 3 — 打磨（上线前）
 
-- [ ] 帮助页（四象 + 点 + 无提现）
-- [ ] 空状态 / 错误文案
-- [ ] 移动端底栏
-- [ ] 备份脚本
-- [ ] 走通 §三 演示脚本 10 次无错
+- [x] 帮助页（四象 + 点 + 无提现）
+- [x] 空状态 / 错误文案（游戏页）
+- [x] 移动端底栏（当前页高亮）
+- [ ] 备份脚本（暂缓）
+- [ ] 走通 §三 演示脚本 10 次无错（暂缓）
 
 ---
 
@@ -209,7 +208,7 @@ CREATE TABLE ledger_entries (
 | POST | `/records/order` | `{ offer_id }` |
 | GET | `/records/orders` | 我的订单 |
 | GET | `/records/orders/{id}` | 详情 + status |
-| POST | `/records/orders/{id}/pickup` | 取餐 |
+| POST | `/records/orders/{id}/pickup` | 确认收进背包 |
 | GET | `/records/messages` | 通知列表 |
 | POST | `/records/messages/{id}/read` | 标已读 |
 | GET | `/stacks` | 背包 |
