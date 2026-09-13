@@ -4,14 +4,15 @@ import { useRoute } from 'vitepress'
 
 const route = useRoute()
 const show = computed(() => route.path.startsWith('/play/'))
+const path = computed(() => route.path)
 </script>
 
 <template>
   <nav v-if="show" class="mw-game-shell" aria-label="游戏导航">
-    <a href="/miraworld/play/city.html" class="mw-tab">地图</a>
-    <a href="/miraworld/play/messages.html" class="mw-tab">通知</a>
-    <a href="/miraworld/play/stacks.html" class="mw-tab">背包</a>
-    <a href="/miraworld/play/me.html" class="mw-tab">我的</a>
+    <a href="/miraworld/play/city.html" class="mw-tab" :class="{ active: path.includes('/play/city') }">地图</a>
+    <a href="/miraworld/play/messages.html" class="mw-tab" :class="{ active: path.includes('/play/messages') }">通知</a>
+    <a href="/miraworld/play/stacks.html" class="mw-tab" :class="{ active: path.includes('/play/stacks') }">背包</a>
+    <a href="/miraworld/play/me.html" class="mw-tab" :class="{ active: path.includes('/play/me') }">我的</a>
   </nav>
 </template>
 
@@ -38,7 +39,8 @@ const show = computed(() => route.path.startsWith('/play/'))
   text-decoration: none;
 }
 
-.mw-tab:hover {
+.mw-tab.active {
   color: var(--vp-c-brand-1);
+  font-weight: 600;
 }
 </style>

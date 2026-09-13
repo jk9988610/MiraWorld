@@ -40,6 +40,7 @@ export default defineConfig({
       {
         text: '游戏',
         items: [
+          { text: '怎么玩', link: '/play/help' },
           { text: '潮灯市', link: '/play/city' },
           { text: '陈师傅', link: '/play/chen' },
           { text: '通知', link: '/play/messages' },
@@ -53,14 +54,7 @@ export default defineConfig({
           { text: '世界概览', link: '/world/overview' },
           { text: '时间线', link: '/world/timeline' },
           { text: '探索法则', link: '/world/exploration' },
-        ],
-      },
-      {
-        text: '地点',
-        items: [
-          { text: '灰烬港', link: '/places/ashen-harbor' },
-          { text: '镜湖驿', link: '/places/mirror-lake' },
-          { text: '断弦塔', link: '/places/broken-string-tower' },
+          { text: '潮灯市', link: '/places/chaodeng-city' },
         ],
       },
       {

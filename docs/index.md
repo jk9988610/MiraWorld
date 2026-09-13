@@ -10,6 +10,6 @@ hero:
       text: 进入潮灯市
       link: /play/city
     - theme: alt
-      text: 世界概览
-      link: /world/overview
+      text: 怎么玩
+      link: /play/help
 ---
