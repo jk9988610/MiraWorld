@@ -54,6 +54,19 @@ def list_messages(player_id: int) -> MessageListResponse:
     return MessageListResponse(messages=[_row_to_message(row) for row in rows])
 
 
+def unread_count(player_id: int) -> int:
+    with db() as conn:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) AS c
+            FROM messages
+            WHERE to_player_id = ? AND read_at IS NULL
+            """,
+            (player_id,),
+        ).fetchone()
+    return int(row["c"]) if row else 0
+
+
 def mark_read(player_id: int, message_id: int) -> MessagePublic:
     with db() as conn:
         row = conn.execute(

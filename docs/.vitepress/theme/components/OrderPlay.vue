@@ -110,8 +110,15 @@ async function pickup() {
 }
 
 .mw-steps {
-  padding-left: 1.2rem;
+  padding-left: 1.25rem;
+  margin: 1rem 0;
   color: var(--vp-c-text-3);
+  line-height: 1.65;
+}
+
+.mw-steps li {
+  margin-bottom: 0.5rem;
+  padding-left: 0.25rem;
 }
 
 .mw-steps li.done {
@@ -125,14 +132,26 @@ async function pickup() {
 }
 
 .mw-btn {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
   margin: 1rem 0;
-  padding: 0.5rem 1.25rem;
+  min-height: 48px;
+  padding: 0.75rem 1.25rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--vp-c-brand-1);
   color: #fff;
   font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mw-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .mw-msg {

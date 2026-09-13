@@ -144,13 +144,18 @@ async function order(offer: CatalogOffer) {
 
 .mw-offer button {
   margin-top: 0.75rem;
-  padding: 0.45rem 1rem;
-  border-radius: 6px;
+  min-height: 48px;
+  min-width: 8rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
   border: none;
   background: var(--vp-c-brand-1);
   color: #fff;
   cursor: pointer;
   font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mw-offer button:disabled {

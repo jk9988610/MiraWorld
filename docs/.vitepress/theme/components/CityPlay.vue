@@ -111,13 +111,15 @@ async function visitSpot(spotId: string) {
 .mw-spot {
   width: 100%;
   text-align: left;
+  min-height: 48px;
   margin-bottom: 0.5rem;
-  padding: 0.65rem 0.85rem;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
   background: var(--vp-c-bg-elv);
   cursor: pointer;
   font: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .mw-spot small {
