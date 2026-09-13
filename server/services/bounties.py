@@ -6,9 +6,14 @@ import uuid
 
 from fastapi import HTTPException
 
-from config_loader import game_messages
+from config_loader import game_messages, items
 from db import db, utc_now
-from schemas.bounty import BountyListResponse, BountyPublic
+from schemas.bounty import (
+    MAX_ACTIVE_BOUNTIES,
+    MAX_BOUNTY_QTY,
+    BountyListResponse,
+    BountyPublic,
+)
 
 
 def _bounty_copy(key: str, **kwargs: str) -> str:
@@ -27,17 +32,24 @@ def _handle(conn: sqlite3.Connection, player_id: int | None) -> str:
     return row["handle"] if row else str(player_id)
 
 
-def _payload_dict(row: sqlite3.Row) -> dict:
-    return json.loads(row["payload_json"] or "{}")
+def _item_display(item_id: str) -> str:
+    for item in items().get("items", []):
+        if item["id"] == item_id:
+            return item.get("display", item_id)
+    raise HTTPException(status_code=400, detail="找不到这个物品")
 
 
-def _notify_bounty(payload: dict) -> bool:
-    return not bool(payload.get("in_person"))
+def _title_for(kind: str, display: str, qty: int) -> str:
+    prefix = "求购" if kind == "buy" else "求售"
+    return f"{prefix} {display} ×{qty}"
 
 
 def _row_to_public(row: sqlite3.Row, issuer_handle: str, worker_handle: str) -> BountyPublic:
-    payload = _payload_dict(row)
     worker_id = row["worker_id"]
+    kind = row["kind"] if "kind" in row.keys() and row["kind"] else "buy"
+    item_id = row["item_id"] if "item_id" in row.keys() and row["item_id"] else ""
+    qty = int(row["qty"]) if "qty" in row.keys() and row["qty"] is not None else 1
+    item_display = row["item_display"] if "item_display" in row.keys() and row["item_display"] else row["title"]
     return BountyPublic(
         id=row["id"],
         issuer_id=row["issuer_id"],
@@ -45,11 +57,13 @@ def _row_to_public(row: sqlite3.Row, issuer_handle: str, worker_handle: str) -> 
         worker_id=int(worker_id) if worker_id is not None else None,
         worker_handle=worker_handle,
         city=row["city"],
+        kind=kind,
+        item_id=item_id,
+        item_display=item_display,
+        qty=qty,
         title=row["title"],
-        body=row["body"] or "",
         price_credits=row["price_credits"],
         status=row["status"],
-        in_person=bool(payload.get("in_person")),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -58,8 +72,8 @@ def _row_to_public(row: sqlite3.Row, issuer_handle: str, worker_handle: str) -> 
 def _get_row(conn: sqlite3.Connection, bounty_id: str) -> sqlite3.Row:
     row = conn.execute(
         """
-        SELECT id, issuer_id, worker_id, city, title, body, price_credits, escrow_credits,
-               status, payload_json, created_at, updated_at
+        SELECT id, issuer_id, worker_id, city, kind, item_id, item_display, qty, title,
+               price_credits, escrow_credits, status, payload_json, created_at, updated_at
         FROM bounties WHERE id = ?
         """,
         (bounty_id,),
@@ -117,17 +131,34 @@ def _notify(
 
 def create_bounty(
     issuer_id: int,
-    title: str,
-    body: str,
+    kind: str,
+    item_id: str,
+    qty: int,
     price_credits: int,
     city: str,
-    in_person: bool,
 ) -> BountyPublic:
+    if kind not in ("buy", "sell"):
+        raise HTTPException(status_code=400, detail="只支持委托购买或委托出售")
+    if qty < 1 or qty > MAX_BOUNTY_QTY:
+        raise HTTPException(status_code=400, detail=f"数量须在 1～{MAX_BOUNTY_QTY} 之间")
+
+    item_display = _item_display(item_id)
+    title = _title_for(kind, item_display, qty)
     bounty_id = f"bty_{uuid.uuid4().hex[:12]}"
     now = utc_now()
-    payload = json.dumps({"in_person": in_person})
+    payload = json.dumps({"kind": kind, "item_id": item_id, "qty": qty})
 
     with db() as conn:
+        active = conn.execute(
+            """
+            SELECT COUNT(*) AS n FROM bounties
+            WHERE issuer_id = ? AND status IN ('open', 'taken', 'submitted')
+            """,
+            (issuer_id,),
+        ).fetchone()
+        if active and int(active["n"]) >= MAX_ACTIVE_BOUNTIES:
+            raise HTTPException(status_code=400, detail=f"最多同时有 {MAX_ACTIVE_BOUNTIES} 件委托商品")
+
         wallet = conn.execute(
             "SELECT wallet_credits FROM users WHERE id = ?",
             (issuer_id,),
@@ -146,16 +177,19 @@ def create_bounty(
         conn.execute(
             """
             INSERT INTO bounties (
-                id, issuer_id, worker_id, city, title, body, price_credits, escrow_credits,
-                status, payload_json, created_at, updated_at
-            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, 'open', ?, ?, ?)
+                id, issuer_id, worker_id, city, kind, item_id, item_display, qty, title, body,
+                price_credits, escrow_credits, status, payload_json, created_at, updated_at
+            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, '', ?, ?, 'open', ?, ?, ?)
             """,
             (
                 bounty_id,
                 issuer_id,
                 city,
-                title.strip(),
-                body.strip(),
+                kind,
+                item_id,
+                item_display,
+                qty,
+                title,
                 price_credits,
                 price_credits,
                 payload,
@@ -171,8 +205,8 @@ def list_bounties(player_id: int, city: str = "潮灯市") -> BountyListResponse
     with db() as conn:
         open_rows = conn.execute(
             """
-            SELECT id, issuer_id, worker_id, city, title, body, price_credits, escrow_credits,
-                   status, payload_json, created_at, updated_at
+            SELECT id, issuer_id, worker_id, city, kind, item_id, item_display, qty, title,
+                   price_credits, escrow_credits, status, payload_json, created_at, updated_at
             FROM bounties
             WHERE status = 'open' AND city = ? AND issuer_id != ?
             ORDER BY created_at DESC
@@ -182,8 +216,8 @@ def list_bounties(player_id: int, city: str = "潮灯市") -> BountyListResponse
         ).fetchall()
         issued_rows = conn.execute(
             """
-            SELECT id, issuer_id, worker_id, city, title, body, price_credits, escrow_credits,
-                   status, payload_json, created_at, updated_at
+            SELECT id, issuer_id, worker_id, city, kind, item_id, item_display, qty, title,
+                   price_credits, escrow_credits, status, payload_json, created_at, updated_at
             FROM bounties
             WHERE issuer_id = ?
             ORDER BY created_at DESC
@@ -193,8 +227,8 @@ def list_bounties(player_id: int, city: str = "潮灯市") -> BountyListResponse
         ).fetchall()
         taken_rows = conn.execute(
             """
-            SELECT id, issuer_id, worker_id, city, title, body, price_credits, escrow_credits,
-                   status, payload_json, created_at, updated_at
+            SELECT id, issuer_id, worker_id, city, kind, item_id, item_display, qty, title,
+                   price_credits, escrow_credits, status, payload_json, created_at, updated_at
             FROM bounties
             WHERE worker_id = ?
             ORDER BY created_at DESC
@@ -227,17 +261,15 @@ def take_bounty(worker_id: int, bounty_id: str) -> BountyPublic:
             (worker_id, now, bounty_id),
         )
         row = _get_row(conn, bounty_id)
-        payload = _payload_dict(row)
-        if _notify_bounty(payload):
-            worker_handle = _handle(conn, worker_id)
-            _notify(
-                conn,
-                to_player_id=row["issuer_id"],
-                from_kind="player",
-                from_id=str(worker_id),
-                body=_bounty_copy("issuer_taken", title=row["title"], worker=worker_handle),
-                bounty_id=bounty_id,
-            )
+        worker_handle = _handle(conn, worker_id)
+        _notify(
+            conn,
+            to_player_id=row["issuer_id"],
+            from_kind="player",
+            from_id=str(worker_id),
+            body=_bounty_copy("issuer_taken", title=row["title"], worker=worker_handle),
+            bounty_id=bounty_id,
+        )
         return _public_from_row(conn, row)
 
 
@@ -255,17 +287,15 @@ def submit_bounty(worker_id: int, bounty_id: str) -> BountyPublic:
             (now, bounty_id),
         )
         row = _get_row(conn, bounty_id)
-        payload = _payload_dict(row)
-        if _notify_bounty(payload):
-            worker_handle = _handle(conn, worker_id)
-            _notify(
-                conn,
-                to_player_id=row["issuer_id"],
-                from_kind="player",
-                from_id=str(worker_id),
-                body=_bounty_copy("issuer_submitted", title=row["title"], worker=worker_handle),
-                bounty_id=bounty_id,
-            )
+        worker_handle = _handle(conn, worker_id)
+        _notify(
+            conn,
+            to_player_id=row["issuer_id"],
+            from_kind="player",
+            from_id=str(worker_id),
+            body=_bounty_copy("issuer_submitted", title=row["title"], worker=worker_handle),
+            bounty_id=bounty_id,
+        )
         return _public_from_row(conn, row)
 
 
@@ -292,16 +322,14 @@ def settle_bounty(issuer_id: int, bounty_id: str) -> BountyPublic:
             (now, bounty_id),
         )
         row = _get_row(conn, bounty_id)
-        payload = _payload_dict(row)
-        if _notify_bounty(payload):
-            _notify(
-                conn,
-                to_player_id=int(worker_id),
-                from_kind="system",
-                from_id=None,
-                body=_bounty_copy("worker_settled", title=row["title"], price=str(price)),
-                bounty_id=bounty_id,
-            )
+        _notify(
+            conn,
+            to_player_id=int(worker_id),
+            from_kind="system",
+            from_id=None,
+            body=_bounty_copy("worker_settled", title=row["title"], price=str(price)),
+            bounty_id=bounty_id,
+        )
         return _public_from_row(conn, row)
 
 

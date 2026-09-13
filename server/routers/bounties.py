@@ -24,11 +24,11 @@ def bounty_create(
 ) -> BountyPublic:
     return create_bounty(
         player.id,
-        body.title,
-        body.body,
+        body.kind,
+        body.item_id,
+        body.qty,
         body.price_credits,
         body.city,
-        body.in_person,
     )
 
 

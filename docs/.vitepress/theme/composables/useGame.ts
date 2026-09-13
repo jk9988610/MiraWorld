@@ -118,11 +118,13 @@ export interface BountyData {
   worker_id?: number | null
   worker_handle: string
   city: string
+  kind: string
+  item_id: string
+  item_display: string
+  qty: number
   title: string
-  body: string
   price_credits: number
   status: string
-  in_person: boolean
   created_at: string
   updated_at: string
 }
@@ -221,12 +223,12 @@ export function useGame() {
     return parseJson<CatalogData>(res)
   }
 
-  async function placeOrder(offerId: string, inPerson = false) {
+  async function placeOrder(offerId: string) {
     const res = await fetch(`${API_BASE}/records/order`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ offer_id: offerId, in_person: inPerson }),
+      body: JSON.stringify({ offer_id: offerId }),
     })
     return parseJson<OrderData>(res)
   }
@@ -351,11 +353,11 @@ export function useGame() {
   }
 
   async function createBounty(body: {
-    title: string
-    body?: string
+    kind: 'buy' | 'sell'
+    item_id: string
+    qty: number
     price_credits: number
     city?: string
-    in_person?: boolean
   }) {
     const res = await fetch(`${API_BASE}/bounties`, {
       method: 'POST',

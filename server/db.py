@@ -238,6 +238,10 @@ def init_db() -> None:
                 issuer_id INTEGER NOT NULL,
                 worker_id INTEGER,
                 city TEXT NOT NULL DEFAULT '潮灯市',
+                kind TEXT NOT NULL DEFAULT 'buy',
+                item_id TEXT NOT NULL DEFAULT '',
+                item_display TEXT NOT NULL DEFAULT '',
+                qty INTEGER NOT NULL DEFAULT 1,
                 title TEXT NOT NULL,
                 body TEXT NOT NULL DEFAULT '',
                 price_credits INTEGER NOT NULL,
@@ -251,6 +255,15 @@ def init_db() -> None:
             )
             """
         )
+        bounty_cols = _columns(conn, "bounties")
+        if "kind" not in bounty_cols:
+            conn.execute("ALTER TABLE bounties ADD COLUMN kind TEXT NOT NULL DEFAULT 'buy'")
+        if "item_id" not in bounty_cols:
+            conn.execute("ALTER TABLE bounties ADD COLUMN item_id TEXT NOT NULL DEFAULT ''")
+        if "item_display" not in bounty_cols:
+            conn.execute("ALTER TABLE bounties ADD COLUMN item_display TEXT NOT NULL DEFAULT ''")
+        if "qty" not in bounty_cols:
+            conn.execute("ALTER TABLE bounties ADD COLUMN qty INTEGER NOT NULL DEFAULT 1")
 
 
 def utc_now() -> str:

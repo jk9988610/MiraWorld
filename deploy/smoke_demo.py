@@ -94,8 +94,8 @@ def run_once(base: str, run_index: int) -> None:
     msgs = api(base, opener, "GET", "/records/messages")
     message_list = msgs.get("messages") or []
     order_msgs = [m for m in message_list if m.get("ref_type") == "order"]
-    if order_msgs:
-        raise DemoError(f"当面点面不应有订单通知，got {len(order_msgs)}")
+    if not order_msgs:
+        raise DemoError("点面后应有订单通知")
 
     summary = api(base, opener, "GET", "/records/messages/summary")
     if "unread_count" not in summary:
@@ -104,9 +104,6 @@ def run_once(base: str, run_index: int) -> None:
     consumed = api(base, opener, "POST", "/stacks/item_noodle_bowl/consume", None)
     if consumed.get("qty", 1) != 0:
         raise DemoError(f"consume expected qty 0, got {consumed}")
-
-    print(f"  run {run_index}: OK handle={handle}", flush=True)
-
 
     print(f"  run {run_index}: OK handle={handle}", flush=True)
 
@@ -161,17 +158,10 @@ def run_v12_once(base: str, run_index: int) -> None:
     if not offer_id:
         raise DemoError(f"create offer failed: {offer}")
 
-    order = api(base, buyer_opener, "POST", "/records/order", {"offer_id": offer_id, "in_person": True})
+    order = api(base, buyer_opener, "POST", "/records/order", {"offer_id": offer_id})
     if order.get("status") != "escrowed":
         raise DemoError(f"player order should be escrowed, got {order.get('status')}")
     order_id = order["id"]
-
-    buyer_msgs = api(base, buyer_opener, "GET", "/records/messages")
-    buyer_order_msgs = [
-        m for m in (buyer_msgs.get("messages") or []) if m.get("ref_type") == "order"
-    ]
-    if buyer_order_msgs:
-        raise DemoError(f"当面点单买家不应收到订单通知: {buyer_order_msgs}")
 
     accepted = api(base, seller_opener, "POST", f"/records/orders/{order_id}/accept", None)
     if accepted.get("status") != "processing":
@@ -180,6 +170,10 @@ def run_v12_once(base: str, run_index: int) -> None:
     ready = api(base, seller_opener, "POST", f"/records/orders/{order_id}/ready", None)
     if ready.get("status") != "ready":
         raise DemoError(f"ready expected ready, got {ready.get('status')}")
+
+    buyer_msgs = api(base, buyer_opener, "GET", "/records/messages")
+    if not any(m.get("ref_type") == "order" for m in (buyer_msgs.get("messages") or [])):
+        raise DemoError("标记好了后买家应收到订单通知")
 
     settled = api(base, buyer_opener, "POST", f"/records/orders/{order_id}/pickup", None)
     if settled.get("status") != "settled":
@@ -258,15 +252,15 @@ def run_v14_once(base: str, run_index: int) -> None:
         buyer_opener,
         "POST",
         "/records/order",
-        {"offer_id": offer_id, "in_person": True},
+        {"offer_id": offer_id},
     )
     if order.get("status") != "ready":
         raise DemoError(f"auto_on order should be ready, got {order.get('status')}")
     order_id = order["id"]
 
     buyer_msgs = api(base, buyer_opener, "GET", "/records/messages")
-    if any(m.get("ref_type") == "order" for m in (buyer_msgs.get("messages") or [])):
-        raise DemoError("当班+当面：买家不应收到订单通知")
+    if not any(m.get("ref_type") == "order" for m in (buyer_msgs.get("messages") or [])):
+        raise DemoError("当班自动好了：买家应收到订单通知")
 
     settled = api(base, buyer_opener, "POST", f"/records/orders/{order_id}/pickup", None)
     if settled.get("status") != "settled":
@@ -309,14 +303,16 @@ def run_v15_once(base: str, run_index: int) -> None:
         "POST",
         "/bounties",
         {
-            "title": f"线索{run_index}",
-            "body": "晚霞岸附近",
+            "kind": "buy",
+            "item_id": "item_mist_snack",
+            "qty": 3,
             "price_credits": 50,
-            "in_person": False,
         },
     )
     if bounty.get("status") != "open":
         raise DemoError(f"bounty should be open, got {bounty.get('status')}")
+    if bounty.get("kind") != "buy":
+        raise DemoError(f"expected buy bounty, got {bounty.get('kind')}")
     bounty_id = bounty["id"]
 
     issuer_after_create = api(base, issuer_opener, "GET", "/me")
@@ -331,7 +327,7 @@ def run_v15_once(base: str, run_index: int) -> None:
 
     issuer_msgs = api(base, issuer_opener, "GET", "/records/messages")
     if not any(m.get("ref_type") == "bounty" for m in (issuer_msgs.get("messages") or [])):
-        raise DemoError("异步委托：发单人应收到接单通知")
+        raise DemoError("委托：发单人应收到接单通知")
 
     submitted = api(base, worker_opener, "POST", f"/bounties/{bounty_id}/submit", None)
     if submitted.get("status") != "submitted":
@@ -353,9 +349,16 @@ def run_v15_once(base: str, run_index: int) -> None:
         issuer_opener,
         "POST",
         "/bounties",
-        {"title": "待取消", "price_credits": 20, "in_person": True},
+        {
+            "kind": "sell",
+            "item_id": "item_noodle_bowl",
+            "qty": 2,
+            "price_credits": 20,
+        },
     )
     cancel_id = cancel_bounty["id"]
+    if cancel_bounty.get("kind") != "sell":
+        raise DemoError(f"expected sell bounty, got {cancel_bounty.get('kind')}")
     cancelled = api(base, issuer_opener, "POST", f"/bounties/{cancel_id}/cancel", None)
     if cancelled.get("status") != "cancelled":
         raise DemoError(f"cancel expected cancelled, got {cancelled.get('status')}")
@@ -365,26 +368,18 @@ def run_v15_once(base: str, run_index: int) -> None:
             f"issuer wallet expected 250 after cancel refund, got {issuer_after_cancel.get('wallet_credits')}"
         )
 
-    in_person = api(
-        base,
-        issuer_opener,
-        "POST",
-        "/bounties",
-        {"title": "当面单", "price_credits": 10, "in_person": True},
-    )
-    in_person_id = in_person["id"]
-    api(base, worker_opener, "POST", f"/bounties/{in_person_id}/take", None)
-    api(base, worker_opener, "POST", f"/bounties/{in_person_id}/submit", None)
-    api(base, issuer_opener, "POST", f"/bounties/{in_person_id}/settle", None)
-
-    issuer_msgs2 = api(base, issuer_opener, "GET", "/records/messages")
-    in_person_msgs = [
-        m
-        for m in (issuer_msgs2.get("messages") or [])
-        if m.get("ref_type") == "bounty" and m.get("ref_id") == in_person_id
-    ]
-    if in_person_msgs:
-        raise DemoError("当面交差：不应有 bounty 通知")
+    try:
+        api(
+            base,
+            issuer_opener,
+            "POST",
+            "/bounties",
+            {"kind": "buy", "item_id": "item_noodle_bowl", "qty": 21, "price_credits": 10},
+        )
+    except DemoError:
+        pass
+    else:
+        raise DemoError("qty 21 should be rejected")
 
     print(
         f"  v1.5 run {run_index}: OK issuer={issuer_handle} worker={worker_handle}",

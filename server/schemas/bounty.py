@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
+BountyKind = Literal["buy", "sell"]
+MAX_BOUNTY_QTY = 20
+MAX_ACTIVE_BOUNTIES = 20
+
+
 class BountyCreateBody(BaseModel):
-    title: str = Field(min_length=2, max_length=64)
-    body: str = Field(default="", max_length=500)
+    kind: BountyKind
+    item_id: str = Field(min_length=1, max_length=64)
+    qty: int = Field(ge=1, le=MAX_BOUNTY_QTY)
     price_credits: int = Field(ge=1, le=9999)
     city: str = Field(default="潮灯市", min_length=1, max_length=64)
-    in_person: bool = False
 
 
 class BountyPublic(BaseModel):
@@ -18,11 +25,13 @@ class BountyPublic(BaseModel):
     worker_id: int | None = None
     worker_handle: str = ""
     city: str
+    kind: str
+    item_id: str
+    item_display: str
+    qty: int
     title: str
-    body: str
     price_credits: int
     status: str
-    in_person: bool = False
     created_at: str
     updated_at: str
 

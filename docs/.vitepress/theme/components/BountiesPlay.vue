@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
-import { useGame, type BountyData } from '../composables/useGame'
+import { useGame, type BountyData, type CatalogData } from '../composables/useGame'
 
 const STATUS: Record<string, string> = {
   open: '待接',
@@ -11,10 +11,17 @@ const STATUS: Record<string, string> = {
   cancelled: '已取消',
 }
 
+const KIND_LABEL: Record<string, string> = {
+  buy: '委托购买',
+  sell: '委托出售',
+}
+
 type TabKey = 'open' | 'issued' | 'taken'
+type BountyKind = 'buy' | 'sell'
 
 const { user, refresh, isLoggedIn } = useAuth()
 const {
+  loadCatalog,
   loadBounties,
   createBounty,
   takeBounty,
@@ -27,10 +34,11 @@ const tab = ref<TabKey>('open')
 const openList = ref<BountyData[]>([])
 const issuedList = ref<BountyData[]>([])
 const takenList = ref<BountyData[]>([])
-const title = ref('')
-const body = ref('')
+const catalog = ref<CatalogData | null>(null)
+const kind = ref<BountyKind>('buy')
+const itemId = ref('item_noodle_bowl')
+const qty = ref(1)
 const price = ref(30)
-const inPerson = ref(true)
 const error = ref('')
 const busy = ref(false)
 
@@ -45,6 +53,14 @@ onMounted(async () => {
   if (!isLoggedIn.value) {
     window.location.href = '/miraworld/auth/login.html'
     return
+  }
+  try {
+    catalog.value = await loadCatalog()
+    if (catalog.value.items.length && !catalog.value.items.some((i) => i.id === itemId.value)) {
+      itemId.value = catalog.value.items[0].id
+    }
+  } catch {
+    /* catalog optional */
   }
   await reload()
 })
@@ -62,18 +78,16 @@ async function reload() {
 }
 
 async function doCreate() {
-  if (!title.value.trim() || busy.value) return
+  if (busy.value) return
   busy.value = true
   error.value = ''
   try {
     await createBounty({
-      title: title.value.trim(),
-      body: body.value.trim(),
+      kind: kind.value,
+      item_id: itemId.value,
+      qty: qty.value,
       price_credits: price.value,
-      in_person: inPerson.value,
     })
-    title.value = ''
-    body.value = ''
     await refresh()
     await reload()
     tab.value = 'issued'
@@ -144,29 +158,33 @@ async function doCancel(id: string) {
 <template>
   <div class="mw-play mw-play--pad" v-if="user">
     <h1>悬赏栏</h1>
-    <p class="mw-lead">发「我要」委托，别人自愿接单、交差结算。仍无配送。</p>
-    <p class="mw-meta">余额 {{ user.wallet_credits }} 点</p>
+    <p class="mw-lead">只支持<strong>委托购买</strong>与<strong>委托出售</strong>，每件 1～20 个。成交全程走通知。</p>
+    <p class="mw-meta">余额 {{ user.wallet_credits }} 点 · 进行中委托最多 20 件</p>
     <p v-if="error" class="mw-err">{{ error }}</p>
 
     <section class="mw-form">
       <h2>发委托</h2>
+      <div class="mw-kind">
+        <button type="button" :class="{ active: kind === 'buy' }" @click="kind = 'buy'">委托购买</button>
+        <button type="button" :class="{ active: kind === 'sell' }" @click="kind = 'sell'">委托出售</button>
+      </div>
       <label>
-        <span>标题</span>
-        <input v-model="title" maxlength="64" placeholder="例如：找一份晚霞岸线索" />
+        <span>物品</span>
+        <select v-model="itemId">
+          <option v-for="item in catalog?.items || []" :key="item.id" :value="item.id">
+            {{ item.display }}
+          </option>
+        </select>
       </label>
-      <label>
-        <span>说明（可选）</span>
-        <textarea v-model="body" rows="2" maxlength="500" placeholder="具体要什么" />
+      <label class="mw-inline">
+        <span>数量</span>
+        <input v-model.number="qty" type="number" min="1" max="20" /> 件（最多 20）
       </label>
       <label class="mw-inline">
         <span>托管</span>
         <input v-model.number="price" type="number" min="1" max="9999" /> 点
       </label>
-      <label class="mw-check">
-        <input v-model="inPerson" type="checkbox" />
-        当面交差（不发通知）
-      </label>
-      <button type="button" class="mw-primary" :disabled="busy || !title.trim()" @click="doCreate">
+      <button type="button" class="mw-primary" :disabled="busy" @click="doCreate">
         {{ busy ? '提交中…' : '发委托' }}
       </button>
     </section>
@@ -183,20 +201,15 @@ async function doCancel(id: string) {
           <strong>{{ b.title }}</strong>
           <span class="mw-price">{{ b.price_credits }} 点</span>
         </div>
-        <p v-if="b.body" class="mw-body">{{ b.body }}</p>
         <p class="mw-meta">
-          {{ STATUS[b.status] || b.status }}
+          {{ KIND_LABEL[b.kind] || b.kind }}
+          · {{ STATUS[b.status] || b.status }}
+          · {{ b.item_display }} ×{{ b.qty }}
           · 发单人 {{ b.issuer_handle }}
           <template v-if="b.worker_handle"> · 接单人 {{ b.worker_handle }}</template>
-          <template v-if="b.in_person"> · 当面</template>
         </p>
         <div class="mw-actions">
-          <button
-            v-if="tab === 'open'"
-            type="button"
-            :disabled="busy"
-            @click="doTake(b.id)"
-          >
+          <button v-if="tab === 'open'" type="button" :disabled="busy" @click="doTake(b.id)">
             接委托
           </button>
           <button
@@ -228,7 +241,7 @@ async function doCancel(id: string) {
       </li>
     </ul>
     <p v-else class="mw-dim">
-      <template v-if="tab === 'open'">还没有人发委托，你可以先在上面发一单。</template>
+      <template v-if="tab === 'open'">还没有购售委托，你可以先在上面发一单。</template>
       <template v-else-if="tab === 'issued'">你还没有发过委托。</template>
       <template v-else>你还没有接过委托。</template>
     </p>
@@ -252,14 +265,18 @@ async function doCancel(id: string) {
 }
 .mw-form label { display: block; margin-bottom: 0.75rem; }
 .mw-form label span { display: block; font-size: 0.875rem; margin-bottom: 0.25rem; }
-.mw-form input[type='text'],
-.mw-form input[type='number'],
-.mw-form textarea {
+.mw-form select,
+.mw-form input[type='number'] {
   width: 100%; box-sizing: border-box; padding: 0.5rem;
   border: 1px solid var(--vp-c-border); border-radius: 6px; font: inherit;
 }
 .mw-inline input { width: 5rem; display: inline-block; margin-right: 0.35rem; }
-.mw-check { display: flex !important; align-items: center; gap: 0.5rem; }
+.mw-kind { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+.mw-kind button {
+  min-height: 40px; padding: 0.4rem 0.85rem; border-radius: 999px;
+  border: 1px solid var(--vp-c-divider); background: var(--vp-c-bg); font: inherit; cursor: pointer;
+}
+.mw-kind button.active { border-color: var(--vp-c-brand-1); color: var(--vp-c-brand-1); }
 .mw-tabs { display: flex; gap: 0.5rem; margin: 1rem 0; flex-wrap: wrap; }
 .mw-tabs button {
   min-height: 40px; padding: 0.4rem 0.85rem; border-radius: 999px;
@@ -273,7 +290,6 @@ async function doCancel(id: string) {
 }
 .mw-card-head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: flex-start; }
 .mw-price { color: var(--vp-c-brand-1); font-weight: 600; white-space: nowrap; }
-.mw-body { margin: 0.35rem 0; color: var(--vp-c-text-2); }
 .mw-actions { margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .mw-actions button, .mw-primary {
   min-height: 44px; padding: 0.5rem 1rem; border-radius: 8px;

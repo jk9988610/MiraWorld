@@ -26,7 +26,7 @@ def create_order(
     body: OrderBody,
     player: PlayerPublic = Depends(get_current_player),
 ) -> OrderPublic:
-    return place_order(player.id, body.offer_id, body.in_person)
+    return place_order(player.id, body.offer_id)
 
 
 @router.get("/records/orders", response_model=OrderListResponse)
