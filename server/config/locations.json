@@ -1,72 +1,60 @@
 {
   "address_schema": {
-    "levels": ["city", "district", "street", "community", "room"],
-    "room_format": "{unit}-{door}",
-    "room_example": "3-502",
+    "levels": ["city", "district"],
+    "display_separator": " · ",
     "path_separator": "/",
-    "display_separator": " ",
-    "short_separator": " · ",
-    "excluded": ["province", "country", "realm"]
+    "note": "宏观两段式；街道、小区、格号等不收录"
   },
   "cities": [
     {
-      "id": "city_a",
-      "city": "A市",
+      "id": "city_chaodeng",
+      "city": "潮灯市",
       "summary": "主城市。MVP 可逛 6 个区。",
       "is_default": true,
       "districts": [
         {
           "id": "dist_hub",
           "district": "枢纽区",
-          "display_short": "A市 · 枢纽区",
-          "summary": "主入口。系统食堂在接驳小区。",
+          "display": "潮灯市 · 枢纽区",
+          "summary": "主入口与系统食堂。",
           "neighbors": ["dist_pier", "dist_market"],
-          "default_street": "中心街道",
-          "default_community": "接驳小区",
           "npcs": ["npc_xiaolin", "npc_chen"],
           "is_spawn": true
         },
         {
           "id": "dist_pier",
           "district": "栈桥区",
-          "display_short": "A市 · 栈桥区",
-          "neighbors": ["dist_hub", "dist_lake"],
-          "default_street": "栈桥街道",
+          "display": "潮灯市 · 栈桥区",
+          "neighbors": ["dist_hub", "dist_sunset"],
           "npcs": ["npc_wu"]
         },
         {
-          "id": "dist_lake",
-          "district": "滨湖区",
-          "display_short": "A市 · 滨湖区",
+          "id": "dist_sunset",
+          "district": "晚霞区",
+          "display": "潮灯市 · 晚霞区",
+          "summary": "湖景、歇脚。",
           "neighbors": ["dist_pier", "dist_outskirts"],
-          "default_street": "湖滨街道",
-          "default_community": "观湖小区",
           "npcs": ["npc_he"]
         },
         {
           "id": "dist_market",
           "district": "商贸区",
-          "display_short": "A市 · 商贸区",
+          "display": "潮灯市 · 商贸区",
           "neighbors": ["dist_hub", "dist_archive"],
-          "default_street": "商业街街道",
-          "default_community": "旺铺小区",
           "npcs": ["npc_xu"]
         },
         {
           "id": "dist_archive",
           "district": "文档区",
-          "display_short": "A市 · 文档区",
+          "display": "潮灯市 · 文档区",
           "neighbors": ["dist_market", "dist_outskirts"],
-          "default_street": "档案街道",
-          "default_community": "公务小区",
           "npcs": ["npc_zhou"]
         },
         {
           "id": "dist_outskirts",
           "district": "远郊区",
-          "display_short": "A市 · 远郊区",
-          "neighbors": ["dist_lake", "dist_archive"],
-          "default_street": "远郊街道",
+          "display": "潮灯市 · 远郊区",
+          "neighbors": ["dist_sunset", "dist_archive"],
           "npcs": []
         }
       ]
@@ -78,9 +66,8 @@
       "districts": [
         {
           "id": "dist_b_border",
-          "district": "市界站",
-          "display_short": "B市 · 市界站",
-          "summary": "邻市预览。",
+          "district": "市界",
+          "display": "B市 · 市界",
           "neighbors": [],
           "npcs": []
         }
@@ -93,8 +80,8 @@
       "districts": [
         {
           "id": "dist_c_border",
-          "district": "市界站",
-          "display_short": "C市 · 市界站",
+          "district": "市界",
+          "display": "C市 · 市界",
           "neighbors": [],
           "npcs": []
         }
@@ -105,51 +92,39 @@
     {
       "id": "npc_xiaolin",
       "display": "小林 · 前台",
-      "address": { "city": "A市", "district": "枢纽区" }
+      "address": { "city": "潮灯市", "district": "枢纽区" }
     },
     {
       "id": "npc_chen",
       "display": "陈师傅",
-      "address": { "city": "A市", "district": "枢纽区", "street": "中心街道", "community": "接驳小区" }
+      "address": { "city": "潮灯市", "district": "枢纽区" }
     },
     {
       "id": "npc_wu",
       "display": "吴跑腿",
-      "address": { "city": "A市", "district": "栈桥区" }
+      "address": { "city": "潮灯市", "district": "栈桥区" }
     },
     {
       "id": "npc_he",
       "display": "何向导",
-      "address": { "city": "A市", "district": "滨湖区" }
+      "address": { "city": "潮灯市", "district": "晚霞区" }
     },
     {
       "id": "npc_xu",
       "display": "许店员",
-      "address": { "city": "A市", "district": "商贸区" }
+      "address": { "city": "潮灯市", "district": "商贸区" }
     },
     {
       "id": "npc_zhou",
       "display": "周管理",
-      "address": { "city": "A市", "district": "文档区" }
+      "address": { "city": "潮灯市", "district": "文档区" }
     }
   ],
   "system_shop": {
     "id": "shop_hub_canteen",
-    "name": "食堂",
-    "display_short": "A市枢纽区 · 食堂",
-    "address": {
-      "city": "A市",
-      "district": "枢纽区",
-      "street": "中心街道",
-      "community": "接驳小区",
-      "room": "1-0"
-    },
+    "name": "枢纽区食堂",
+    "display": "潮灯市 · 枢纽区",
+    "address": { "city": "潮灯市", "district": "枢纽区" },
     "chef_npc_id": "npc_chen"
-  },
-  "address_examples": {
-    "map_node": { "city": "A市", "district": "栈桥区" },
-    "shop": { "city": "A市", "district": "枢纽区", "street": "中心街道", "community": "接驳小区", "room": "1-0" },
-    "home_delivery": { "city": "A市", "district": "滨湖区", "street": "湖滨街道", "community": "观湖小区", "room": "3-502" },
-    "path_full": "A市/枢纽区/中心街道/接驳小区/1-0"
   }
 }
