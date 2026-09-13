@@ -263,7 +263,7 @@ mail_messages  # system only, from_user_id NULL
 |------|------|
 | 地图节点 slug 对齐 | `ashen-harbor` ↔ `docs/places/ashen-harbor.md` |
 | lore 页加「在此打卡」链到游戏地点页 | 双向导航 |
-| 食堂入口从潮灯港 lore **和游戏地图** 都能进 | 发布会演示路径 |
+| 食堂入口从 A区 lore **和游戏地图** 都能进 | 发布会演示路径 |
 
 ---
 
