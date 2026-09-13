@@ -24,6 +24,15 @@ def _pick_surname(rng: random.Random) -> str:
     return rng.choice(pool) if pool else "王"
 
 
+def _pick_honorific(rng: random.Random) -> str:
+    cfg = pop_spotlight_names()
+    weights = cfg.get("honorific_weights", {"先生": 0.5, "女士": 0.5})
+    roll = rng.random()
+    if roll < float(weights.get("先生", 0.5)):
+        return "先生"
+    return "女士"
+
+
 def _institution_for_seller(conn: sqlite3.Connection, seller_kind: str, seller_id: str, offer_id: str) -> str | None:
     if seller_kind == "npc":
         row = conn.execute(
@@ -90,7 +99,8 @@ def add_spotlight_for_order(
         return
     rng = rng or random.Random()
     surname = _pick_surname(rng)
-    display_name = f"{surname}{job_display}"
+    honorific = _pick_honorific(rng)
+    display_name = f"{surname}{honorific}"
     conn.execute(
         """
         INSERT INTO spotlight_entries (

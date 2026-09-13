@@ -60,8 +60,12 @@ def run_v20_once(base: str, run_index: int) -> None:
         raise DemoError(f"spotlight max 10, got {len(items)}")
     name = items[0].get("display_name", "")
     job = items[0].get("job_display", "")
-    if not name.endswith(job):
-        raise DemoError(f"spotlight name should end with job: {name} / {job}")
+    if not job:
+        raise DemoError(f"spotlight missing job_display: {items[0]}")
+    if not (name.endswith("先生") or name.endswith("女士")):
+        raise DemoError(f"spotlight name should be surname+先生/女士, got {name!r}")
+    if name.endswith(job):
+        raise DemoError(f"spotlight name must not repeat job: {name} / {job}")
 
     print(f"  v2.0 run {run_index}: OK purchases={purchases} spotlight={len(items)}", flush=True)
 
