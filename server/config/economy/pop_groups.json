@@ -16,7 +16,7 @@
     { "id": "pg_06", "primary_institution_id": "inst_chaodeng_clinic", "job_type": "clerk", "job_display": "账房" },
     { "id": "pg_07", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" },
     { "id": "pg_08", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" },
-    { "id": "pg_09", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" },
-    { "id": "pg_10", "primary_institution_id": "inst_east_smithy", "job_type": "blacksmith", "job_display": "铁匠" }
+    { "id": "pg_09" },
+    { "id": "pg_10" }
   ]
 }

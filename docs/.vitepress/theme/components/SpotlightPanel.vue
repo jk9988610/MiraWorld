@@ -27,11 +27,10 @@ onMounted(async () => {
 <template>
   <section v-if="!loading && items.length" class="mw-spotlight">
     <h2>{{ title || '今日来客' }}</h2>
-    <p class="mw-dim">市民买了什么，姓与职业来自真实岗位（最多 10 条）。</p>
+    <p class="mw-dim">姓与职业来自真实岗位，一条显示（最多 10 条）。</p>
     <ul class="mw-spotlist">
       <li v-for="(item, idx) in items" :key="`${item.order_id}-${idx}`">
         <strong>{{ item.display_name }}</strong>
-        <span class="mw-dim"> · {{ item.job_display }}</span>
       </li>
     </ul>
   </section>

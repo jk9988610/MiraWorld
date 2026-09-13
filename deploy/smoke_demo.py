@@ -60,10 +60,26 @@ def run_v20_once(base: str, run_index: int) -> None:
         raise DemoError(f"spotlight max 10, got {len(items)}")
     name = items[0].get("display_name", "")
     job = items[0].get("job_display", "")
+    if not job:
+        raise DemoError(f"spotlight missing job_display: {items[0]}")
     if not name.endswith(job):
-        raise DemoError(f"spotlight name should end with job: {name} / {job}")
+        raise DemoError(f"spotlight name should be surname+job: {name!r} / {job!r}")
+    if name.endswith("先生") or name.endswith("女士"):
+        raise DemoError(f"spotlight must not use honorific: {name!r}")
 
-    print(f"  v2.0 run {run_index}: OK purchases={purchases} spotlight={len(items)}", flush=True)
+    audit = api(base, opener, "GET", f"/economy/audit?city={quote(CITY)}")
+    if not audit.get("ok"):
+        raise DemoError(f"economy audit failed: {audit}")
+    wallets = (audit.get("checks") or {}).get("wallets") or {}
+    if wallets.get("unemployed_groups", 0) < 1:
+        raise DemoError(f"expected unemployed pop groups for P3: {wallets}")
+    if wallets.get("employed_groups", 0) < 1:
+        raise DemoError(f"expected employed pop groups for P3: {wallets}")
+
+    print(
+        f"  v2.0 run {run_index}: OK purchases={purchases} spotlight={len(items)} audit=ok",
+        flush=True,
+    )
 
 
 def api(base: str, opener, method: str, path: str, body: dict | None = None, extra_headers: dict | None = None) -> dict:
