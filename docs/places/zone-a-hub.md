@@ -10,7 +10,7 @@
 
 ## 可询问
 
-- **[小林 · 前台](/characters/npc-xiaolin)**：A市 各区怎么走。
+- **[小林 · 前台](/characters/npc-xiaolin)**：潮灯市 各区怎么走。
 - **[陈师傅](/characters/npc-chen)**：标准汤面 **15 点**。
 
 ## 可前往（同市）
