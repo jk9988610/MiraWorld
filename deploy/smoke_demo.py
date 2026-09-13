@@ -107,6 +107,99 @@ def run_once(base: str, run_index: int) -> None:
     print(f"  run {run_index}: OK handle={handle}", flush=True)
 
 
+    print(f"  run {run_index}: OK handle={handle}", flush=True)
+
+
+def run_v12_once(base: str, run_index: int) -> None:
+    suffix = uuid.uuid4().hex[:6]
+    seller_handle = f"店{suffix[:4]}"
+    buyer_handle = f"客{suffix[2:]}"
+
+    seller_jar = CookieJar()
+    seller_opener = build_opener(HTTPCookieProcessor(seller_jar))
+    buyer_jar = CookieJar()
+    buyer_opener = build_opener(HTTPCookieProcessor(buyer_jar))
+
+    api(
+        base,
+        seller_opener,
+        "POST",
+        "/auth/register",
+        {"handle": seller_handle, "password": PASSWORD},
+    )
+    api(
+        base,
+        buyer_opener,
+        "POST",
+        "/auth/register",
+        {"handle": buyer_handle, "password": PASSWORD},
+    )
+
+    shop = api(
+        base,
+        seller_opener,
+        "POST",
+        "/shop/apply",
+        {"display_name": f"烟{run_index}号食堂"},
+    )
+    if not shop.get("display_name"):
+        raise DemoError(f"shop apply failed: {shop}")
+
+    offer = api(
+        base,
+        seller_opener,
+        "POST",
+        "/shop/offers",
+        {
+            "item_id": "item_noodle_bowl",
+            "display": "试营业汤面",
+            "price_credits": 12,
+        },
+    )
+    offer_id = offer.get("id")
+    if not offer_id:
+        raise DemoError(f"create offer failed: {offer}")
+
+    order = api(base, buyer_opener, "POST", "/records/order", {"offer_id": offer_id})
+    if order.get("status") != "escrowed":
+        raise DemoError(f"player order should be escrowed, got {order.get('status')}")
+    order_id = order["id"]
+
+    accepted = api(base, seller_opener, "POST", f"/records/orders/{order_id}/accept", None)
+    if accepted.get("status") != "processing":
+        raise DemoError(f"accept expected processing, got {accepted.get('status')}")
+
+    ready = api(base, seller_opener, "POST", f"/records/orders/{order_id}/ready", None)
+    if ready.get("status") != "ready":
+        raise DemoError(f"ready expected ready, got {ready.get('status')}")
+
+    settled = api(base, buyer_opener, "POST", f"/records/orders/{order_id}/pickup", None)
+    if settled.get("status") != "settled":
+        raise DemoError(f"pickup expected settled, got {settled.get('status')}")
+
+    seller_me = api(base, seller_opener, "GET", "/me")
+    buyer_me = api(base, buyer_opener, "GET", "/me")
+    if buyer_me.get("wallet_credits") != 288:
+        raise DemoError(f"buyer wallet expected 288, got {buyer_me.get('wallet_credits')}")
+    if seller_me.get("wallet_credits") != 212:
+        raise DemoError(f"seller wallet expected 212, got {seller_me.get('wallet_credits')}")
+
+    sent = api(
+        base,
+        buyer_opener,
+        "POST",
+        "/records/messages/send",
+        {"to_handle": seller_handle, "body": "面不错"},
+    )
+    if sent.get("from_kind") != "player":
+        raise DemoError(f"send message failed: {sent}")
+
+    print(
+        f"  v1.2 run {run_index}: OK seller={seller_handle} buyer={buyer_handle}",
+        flush=True,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="MiraWorld MVP smoke demo (HTTP)")
     parser.add_argument(
@@ -115,6 +208,11 @@ def main() -> int:
         type=int,
         default=5,
         help="Number of full demo passes (default: 5)",
+    )
+    parser.add_argument(
+        "--v12",
+        action="store_true",
+        help="Run v1.2 player shop demo instead of v1.0 MVP loop",
     )
     parser.add_argument(
         "--base",
@@ -133,9 +231,11 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    print(f"Smoke demo: {args.runs} run(s) -> {base}", flush=True)
+    label = "v1.2 shop" if args.v12 else "v1.0 MVP"
+    print(f"Smoke demo ({label}): {args.runs} run(s) -> {base}", flush=True)
+    runner = run_v12_once if args.v12 else run_once
     for i in range(1, args.runs + 1):
-        run_once(base, i)
+        runner(base, i)
         if i < args.runs and args.pause > 0:
             time.sleep(args.pause)
     print(f"All {args.runs} run(s) passed.", flush=True)

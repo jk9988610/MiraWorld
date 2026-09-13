@@ -198,6 +198,33 @@ def init_db() -> None:
             )
             """
         )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS shops (
+                player_id INTEGER PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                city TEXT NOT NULL DEFAULT '潮灯市',
+                open INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS player_offers (
+                id TEXT PRIMARY KEY,
+                player_id INTEGER NOT NULL,
+                item_id TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 1,
+                price_credits INTEGER NOT NULL,
+                display TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+            """
+        )
 
 
 def utc_now() -> str:

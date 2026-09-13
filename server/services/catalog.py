@@ -6,8 +6,14 @@ from config_loader import items, offers
 from schemas.catalog import CatalogItem, CatalogOffer, CatalogResponse
 
 
-def _active_offers() -> list[dict]:
+def _active_npc_offers() -> list[dict]:
     return [o for o in offers().get("offers", []) if o.get("active", True)]
+
+
+def _active_offers() -> list[dict]:
+    from services.shops import active_player_offers_catalog
+
+    return _active_npc_offers() + active_player_offers_catalog()
 
 
 def get_offer(offer_id: str) -> dict:

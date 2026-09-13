@@ -55,6 +55,9 @@ async function openMessage(msg: MessageData) {
         :class="{ unread: !msg.read_at }"
       >
         <button type="button" class="mw-msg-btn" @click="openMessage(msg)">
+          <span v-if="msg.from_kind === 'player' && msg.from_display" class="mw-from">
+            {{ msg.from_display }}：
+          </span>
           <span class="mw-body">{{ msg.body }}</span>
           <small>{{ msg.created_at.slice(0, 19).replace('T', ' ') }}</small>
         </button>
@@ -94,6 +97,12 @@ async function openMessage(msg: MessageData) {
 li.unread .mw-msg-btn {
   border-left: 3px solid var(--vp-c-brand-1);
   background: color-mix(in srgb, var(--vp-c-brand-1) 6%, var(--vp-c-bg-elv));
+}
+
+.mw-from {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--vp-c-text-3);
 }
 
 .mw-body {

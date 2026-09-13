@@ -4,6 +4,12 @@
     "ready": "「{display}」好了。点进订单，确认收进背包。",
     "pickup_blocked": "还不能收进背包，请稍后再试。"
   },
+  "player_order": {
+    "buyer_received": "「{shop}」收到了你的「{display}」单，等店主接单。",
+    "seller_new": "「{buyer}」点了你的「{display}」，去我的店接单。",
+    "buyer_accepted": "店主已接单，正在做「{display}」。",
+    "buyer_ready": "「{display}」好了。点进订单，确认收进背包。"
+  },
   "npc_from_display": {
     "npc_chen": "陈师傅"
   }
