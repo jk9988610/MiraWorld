@@ -27,7 +27,7 @@ onMounted(async () => {
 <template>
   <section v-if="!loading && items.length" class="mw-spotlight">
     <h2>{{ title || '今日来客' }}</h2>
-    <p class="mw-dim">市民买了什么，姓与职业来自真实岗位（最多 10 条）。</p>
+    <p class="mw-dim">来客姓与先生/女士随机；职业单独列出，必须来自机构真实岗位（最多 10 条）。</p>
     <ul class="mw-spotlist">
       <li v-for="(item, idx) in items" :key="`${item.order_id}-${idx}`">
         <strong>{{ item.display_name }}</strong>

@@ -97,9 +97,9 @@ title: 怎么玩
 
 **永久不做：** 招贤应聘、雇玩家、律师判决、作家/trace、中介、配送骑手。详见设计文档 `04-乌托邦经济`。
 
-## v2.0 内生经济（API 已上线，UI 未做）
+## v2.0 内生经济（API + UI 已上线）
 
-后端已实现日 tick；可用 `POST /economy/tick`（Header `X-Tick-Secret`）触发，或 cron 每日调用。
+后端日 tick；可用 `POST /economy/tick`（Header `X-Tick-Secret`）触发，或 cron 每日调用。
 
 | 谁 | 收入 |
 |----|------|
@@ -107,5 +107,7 @@ title: 怎么玩
 | **在岗工人** | **最低工资**（12 点/人/日，机构发薪） |
 
 查询：`GET /economy/status` · 聚光灯：`GET /shop/inst_chen_noodle/spotlight`
+
+**Spotlight 来客：** 显示为「姓 + 先生/女士 · 职业」（如 `王先生 · 厨师`）。职业来自机构真实 slot，**不**写进称谓。
 
 **UI：** [城市经营](/play/economy.html) 仪表盘 · 陈师傅页 Spotlight 来客列表
