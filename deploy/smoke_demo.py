@@ -368,7 +368,7 @@ def run_v15_once(base: str, run_index: int) -> None:
             f"issuer wallet expected 250 after cancel refund, got {issuer_after_cancel.get('wallet_credits')}"
         )
 
-    for i in range(8):
+    for i in range(10):
         api(
             base,
             issuer_opener,
