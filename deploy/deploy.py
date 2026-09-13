@@ -197,7 +197,7 @@ def main() -> int:
                     with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as f:
                         f.write(
                             "MIRAWORLD_ENV=production\n"
-                            "MIRAWORLD_AUTH_DB=/var/lib/miraworld/auth.db\n"
+                            "MIRAWORLD_DB=/var/lib/miraworld/miraworld.db\n"
                             f"MIRAWORLD_JWT_SECRET={jwt_secret}\n"
                         )
                     sftp.put(auth_env_path, "/tmp/miraworld-auth.env")

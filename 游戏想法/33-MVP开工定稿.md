@@ -62,16 +62,16 @@
 
 - VitePress 站点、auth API、nginx
 
-### Phase 1 — 人 + 地 + 壳（第一个可演示里程碑）
+### Phase 1 — 人 + 地 + 壳（第一个可演示里程碑） ✅
 
-- [ ] `miraworld.db` 合并迁移
-- [ ] `users`: `handle`, `password_hash`, `city`, `wallet_credits`, `bio`
-- [ ] 注册默认 `city=潮灯市`, `wallet_credits=300`
-- [ ] handle 主登录；email 可选
-- [ ] `GET /api/world` 读 `locations.json`（市 + spots + npc）
-- [ ] `POST /api/records/visit` 打卡市 / spot
-- [ ] GameShell 底栏骨架
-- [ ] 页面：潮灯市地图、/me
+- [x] `miraworld.db` 合并迁移
+- [x] `users`: `handle`, `password_hash`, `city`, `wallet_credits`, `bio`
+- [x] 注册默认 `city=潮灯市`, `wallet_credits=300`
+- [x] handle 主登录；email 可选
+- [x] `GET /api/world` 读 `locations.json`（市 + spots + npc）
+- [x] `POST /api/records/visit` 打卡市 / spot
+- [x] GameShell 底栏骨架
+- [x] 页面：潮灯市地图、/me
 
 **Phase 1 不做了：** 订单、背包、通知
 

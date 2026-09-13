@@ -8,9 +8,9 @@ const props = defineProps<{
 
 const { login, register } = useAuth()
 
-const email = ref('')
+const handle = ref('')
 const password = ref('')
-const displayName = ref('')
+const email = ref('')
 const error = ref('')
 const submitting = ref(false)
 
@@ -19,11 +19,11 @@ async function onSubmit() {
   submitting.value = true
   try {
     if (props.mode === 'register') {
-      await register(email.value, password.value, displayName.value)
+      await register(handle.value, password.value, email.value || undefined)
     } else {
-      await login(email.value, password.value)
+      await login(handle.value, password.value)
     }
-    window.location.href = '/miraworld/'
+    window.location.href = '/miraworld/play/city.html'
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败'
   } finally {
@@ -34,19 +34,20 @@ async function onSubmit() {
 
 <template>
   <form class="mw-auth-form" @submit.prevent="onSubmit">
-    <h1>{{ mode === 'login' ? '登录' : '注册账号' }}</h1>
+    <h1>{{ mode === 'login' ? '登录' : '注册' }}</h1>
     <p class="mw-auth-lead">
-      {{ mode === 'login' ? '登录后可保存探索进度与个性化设置。' : '创建账号以参与 MiraWorld 的探索。' }}
+      {{ mode === 'login' ? '登录米拉世界，继续你在潮灯市的旅程。' : '取一个名字，进入潮灯市。新手礼 300 点。' }}
     </p>
 
-    <label v-if="mode === 'register'">
-      <span>显示名称</span>
-      <input v-model="displayName" type="text" required maxlength="64" autocomplete="nickname" />
+    <label>
+      <span>名字</span>
+      <input v-model="handle" type="text" required minlength="2" maxlength="32" autocomplete="username" />
+      <small>登录与收信用，2～32 字</small>
     </label>
 
-    <label>
-      <span>邮箱</span>
-      <input v-model="email" type="email" required autocomplete="email" />
+    <label v-if="mode === 'register'">
+      <span>邮箱（可选）</span>
+      <input v-model="email" type="email" autocomplete="email" />
     </label>
 
     <label>
@@ -64,7 +65,7 @@ async function onSubmit() {
     <p v-if="error" class="mw-auth-error">{{ error }}</p>
 
     <button type="submit" class="mw-auth-submit" :disabled="submitting">
-      {{ submitting ? '请稍候…' : mode === 'login' ? '登录' : '注册' }}
+      {{ submitting ? '请稍候…' : mode === 'login' ? '登录' : '进入潮灯市' }}
     </button>
 
     <p class="mw-auth-switch">

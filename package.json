@@ -7,7 +7,7 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "auth:dev": "cd server && MIRAWORLD_AUTH_DB=../data/auth.db MIRAWORLD_JWT_SECRET=dev-secret-change-me python3 -m uvicorn app:app --reload --port 8787",
+    "auth:dev": "cd server && MIRAWORLD_DB=../data/miraworld.db MIRAWORLD_JWT_SECRET=dev-secret-change-me python3 -m uvicorn app:app --reload --port 8787",
     "deploy": "npm run docs:build && python3 deploy/deploy.py"
   },
   "devDependencies": {

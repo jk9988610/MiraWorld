@@ -16,10 +16,11 @@ async function handleLogout() {
 <template>
   <div class="mw-user-nav" v-if="!loading || isLoggedIn">
     <template v-if="isLoggedIn && user">
-      <span class="mw-user-name" :title="user.email">{{ user.display_name }}</span>
-      <button type="button" class="mw-auth-btn mw-auth-btn--ghost" @click="handleLogout">
-        退出
-      </button>
+      <a class="mw-user-name" href="/miraworld/play/me.html" :title="`${user.wallet_credits} 点`">
+        {{ user.handle }} · {{ user.wallet_credits }}点
+      </a>
+      <a class="mw-auth-btn" href="/miraworld/play/city.html">潮灯市</a>
+      <button type="button" class="mw-auth-btn mw-auth-btn--ghost" @click="handleLogout">退出</button>
     </template>
     <template v-else>
       <a class="mw-auth-btn" href="/miraworld/auth/login.html">登录</a>
@@ -37,12 +38,13 @@ async function handleLogout() {
 }
 
 .mw-user-name {
-  max-width: 8rem;
+  max-width: 10rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.875rem;
   color: var(--vp-c-text-2);
+  text-decoration: none;
 }
 
 .mw-auth-btn {

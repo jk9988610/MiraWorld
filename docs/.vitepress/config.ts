@@ -13,17 +13,17 @@ export default defineConfig({
     },
   },
   lang: 'zh-Hans',
-  title: 'MiraWorld',
-  titleTemplate: ':title · MiraWorld',
-  description: '可探索的文字世界设定资料',
+  title: '米拉世界',
+  titleTemplate: ':title · 米拉世界',
+  description: '米拉世界 MiraWorld — 潮灯市可探索的异步文字世界',
   base: '/miraworld/',
   cleanUrls: false,
   themeConfig: {
     logo: undefined,
-    siteTitle: 'MiraWorld',
+    siteTitle: '米拉世界',
     nav: [
+      { text: '潮灯市', link: '/play/city' },
       { text: '世界', link: '/world/overview' },
-      { text: '地点', link: '/places/ashen-harbor' },
       { text: '探索', link: '/world/exploration' },
       { text: '术语', link: '/reference/glossary' },
     ],
@@ -35,6 +35,15 @@ export default defineConfig({
           { text: '如何阅读本站', link: '/guide/how-to-read' },
           { text: '登录', link: '/auth/login' },
           { text: '注册', link: '/auth/register' },
+        ],
+      },
+      {
+        text: '游戏',
+        items: [
+          { text: '潮灯市', link: '/play/city' },
+          { text: '通知', link: '/play/messages' },
+          { text: '背包', link: '/play/stacks' },
+          { text: '我的', link: '/play/me' },
         ],
       },
       {
