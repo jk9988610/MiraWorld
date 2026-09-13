@@ -1,17 +1,14 @@
-# B区 · 栈桥廊
+# A市 · 栈桥区
 
-连接 **A区** 与 **C区** 的栈桥廊道。接驳牌很显眼。
+**联合省 · A市 · 栈桥区 · 栈桥街道**
 
-## 第一印象
-
-桥面不长，两侧是栏杆和方向牌：**← A区枢纽**、**→ C区湖滨**。  
-[吴跑腿](/characters/npc-wu) 常在桥头看手机——配送功能 v1.3 以后从这接活。
+连接枢纽区与滨湖区。
 
 ## 可前往
 
-- → [A区 · 枢纽站](/places/zone-a-hub)
-- → [C区 · 湖滨休息](/places/zone-c-lakeside)
+- → [A市 · 枢纽区](/places/zone-a-hub)
+- → [A市 · 滨湖区](/places/zone-c-lakeside)
 
 ## 相关
 
-- [世界概览](/world/overview)
+- [吴跑腿](/characters/npc-wu)

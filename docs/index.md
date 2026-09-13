@@ -4,7 +4,7 @@ layout: home
 hero:
   name: MiraWorld
   text: 可探索的文字世界
-  tagline: A区、B区、C区……在分区与选择之间漫游——可探索的文字世界资料。
+  tagline: A市、B市、C市……在省市区街道之间漫游——可探索的文字世界资料。
   actions:
     - theme: brand
       text: 世界概览

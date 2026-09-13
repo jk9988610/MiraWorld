@@ -1,59 +1,111 @@
 {
-  "zones": [
+  "address_levels": ["province", "city", "district", "street", "community", "unit", "door"],
+  "province": {
+    "id": "province_union",
+    "name": "联合省"
+  },
+  "cities": [
     {
-      "id": "zone_a",
-      "code": "A",
-      "name": "枢纽站",
-      "display": "A区 · 枢纽站",
-      "summary": "主入口与接驳中心。A区食堂在这。",
-      "neighbors": ["zone_b", "zone_d"],
-      "npcs": ["npc_xiaolin", "npc_chen"],
-      "is_hub": true
+      "id": "city_a",
+      "codename": "A市",
+      "name": "A市",
+      "summary": "主城市。MVP 可逛 6 个区。",
+      "is_default": true,
+      "districts": [
+        {
+          "id": "dist_hub",
+          "name": "枢纽区",
+          "display": "A市 · 枢纽区",
+          "summary": "主入口。系统食堂在中心街道接驳小区。",
+          "neighbors": ["dist_pier", "dist_market"],
+          "street": { "id": "street_center", "name": "中心街道" },
+          "community": { "id": "community_hub", "name": "接驳小区" },
+          "npcs": ["npc_xiaolin", "npc_chen"],
+          "is_spawn": true
+        },
+        {
+          "id": "dist_pier",
+          "name": "栈桥区",
+          "display": "A市 · 栈桥区",
+          "summary": "连接枢纽区与滨湖区。",
+          "neighbors": ["dist_hub", "dist_lake"],
+          "street": { "id": "street_pier", "name": "栈桥街道" },
+          "npcs": ["npc_wu"]
+        },
+        {
+          "id": "dist_lake",
+          "name": "滨湖区",
+          "display": "A市 · 滨湖区",
+          "summary": "长椅、湖景。",
+          "neighbors": ["dist_pier", "dist_outskirts"],
+          "street": { "id": "street_lake", "name": "湖滨街道" },
+          "community": { "id": "community_lake", "name": "观湖小区" },
+          "npcs": ["npc_he"]
+        },
+        {
+          "id": "dist_market",
+          "name": "商贸区",
+          "display": "A市 · 商贸区",
+          "summary": "商业街。v1.2 玩家开店。",
+          "neighbors": ["dist_hub", "dist_archive"],
+          "street": { "id": "street_market", "name": "商业街街道" },
+          "community": { "id": "community_market", "name": "旺铺小区" },
+          "npcs": ["npc_xu"]
+        },
+        {
+          "id": "dist_archive",
+          "name": "文档区",
+          "display": "A市 · 文档区",
+          "summary": "管理处与规则公示。",
+          "neighbors": ["dist_market", "dist_outskirts"],
+          "street": { "id": "street_archive", "name": "档案街道" },
+          "community": { "id": "community_archive", "name": "公务小区" },
+          "npcs": ["npc_zhou"]
+        },
+        {
+          "id": "dist_outskirts",
+          "name": "远郊区",
+          "display": "A市 · 远郊区",
+          "summary": "市郊边缘，部分内容后续开放。",
+          "neighbors": ["dist_lake", "dist_archive"],
+          "street": { "id": "street_outskirts", "name": "远郊街道" },
+          "npcs": []
+        }
+      ]
     },
     {
-      "id": "zone_b",
-      "code": "B",
-      "name": "栈桥廊",
-      "display": "B区 · 栈桥廊",
-      "summary": "连接 A 与 C 的栈桥廊道。接驳牌指向两侧。",
-      "neighbors": ["zone_a", "zone_c"],
-      "npcs": ["npc_wu"]
+      "id": "city_b",
+      "codename": "B市",
+      "name": "B市",
+      "summary": "邻市。MVP 仅市界预览节点。",
+      "preview": true,
+      "districts": [
+        {
+          "id": "dist_b_border",
+          "name": "市界站",
+          "display": "B市 · 市界站",
+          "summary": "A市与 B市 方向交界。后续版本深入 B市。",
+          "neighbors": [],
+          "npcs": []
+        }
+      ]
     },
     {
-      "id": "zone_c",
-      "code": "C",
-      "name": "湖滨休息",
-      "display": "C区 · 湖滨休息",
-      "summary": "长椅、湖景。适合慢下来。",
-      "neighbors": ["zone_b", "zone_f"],
-      "npcs": ["npc_he"]
-    },
-    {
-      "id": "zone_d",
-      "code": "D",
-      "name": "商业街",
-      "display": "D区 · 商业街",
-      "summary": "招牌林立。首发仅浏览，v1.2 可开店。",
-      "neighbors": ["zone_a", "zone_e"],
-      "npcs": ["npc_xu"]
-    },
-    {
-      "id": "zone_e",
-      "code": "E",
-      "name": "档案塔",
-      "display": "E区 · 档案塔",
-      "summary": "管理处与规则公示。有问题找周管理。",
-      "neighbors": ["zone_d", "zone_f"],
-      "npcs": ["npc_zhou"]
-    },
-    {
-      "id": "zone_f",
-      "code": "F",
-      "name": "遗迹长廊",
-      "display": "F区 · 遗迹长廊",
-      "summary": "地图边缘。远处有未开放的老结构。",
-      "neighbors": ["zone_c", "zone_e"],
-      "npcs": []
+      "id": "city_c",
+      "codename": "C市",
+      "name": "C市",
+      "summary": "邻市。MVP 仅市界预览节点。",
+      "preview": true,
+      "districts": [
+        {
+          "id": "dist_c_border",
+          "name": "市界站",
+          "display": "C市 · 市界站",
+          "summary": "A市与 C市 方向交界。",
+          "neighbors": [],
+          "npcs": []
+        }
+      ]
     }
   ],
   "npcs": [
@@ -61,49 +113,59 @@
       "id": "npc_xiaolin",
       "display": "小林 · 前台",
       "role": "reception",
-      "zone_id": "zone_a",
-      "greeting": "没主线。先逛各区，或去 A区食堂点一碗面。"
+      "city_id": "city_a",
+      "district_id": "dist_hub",
+      "greeting": "没主线。先逛 A市 各区，或去枢纽区食堂。"
     },
     {
       "id": "npc_chen",
       "display": "陈师傅",
       "role": "chef",
-      "zone_id": "zone_a",
+      "city_id": "city_a",
+      "district_id": "dist_hub",
       "greeting": "标准汤面，十五点。下单就走托管。"
-    },
-    {
-      "id": "npc_xu",
-      "display": "许店员",
-      "role": "clerk",
-      "zone_id": "zone_d",
-      "greeting": "D区店还没全开。先看看招牌。"
     },
     {
       "id": "npc_wu",
       "display": "吴跑腿",
       "role": "runner",
-      "zone_id": "zone_b",
-      "greeting": "B区接驳。以后配送从这走。"
+      "city_id": "city_a",
+      "district_id": "dist_pier",
+      "greeting": "栈桥区接驳。以后配送按完整地址算运费。"
     },
     {
       "id": "npc_he",
       "display": "何向导",
       "role": "guide",
-      "zone_id": "zone_c",
-      "greeting": "C区适合歇脚。往 B 回枢纽，往 F 看遗迹。"
+      "city_id": "city_a",
+      "district_id": "dist_lake",
+      "greeting": "滨湖区适合歇脚。回枢纽区走栈桥区。"
+    },
+    {
+      "id": "npc_xu",
+      "display": "许店员",
+      "role": "clerk",
+      "city_id": "city_a",
+      "district_id": "dist_market",
+      "greeting": "商贸区店还没全开。先看看招牌。"
     },
     {
       "id": "npc_zhou",
       "display": "周管理",
       "role": "admin",
-      "zone_id": "zone_e",
-      "greeting": "规则在 E区公告栏。托管和分账看平台说明。"
+      "city_id": "city_a",
+      "district_id": "dist_archive",
+      "greeting": "规则在文档区公告栏。地址写到小区单元，配送才准。"
     }
   ],
   "system_shop": {
-    "id": "shop_a_canteen",
-    "display": "A区食堂",
-    "zone_id": "zone_a",
+    "id": "shop_hub_canteen",
+    "display": "A市枢纽区 · 食堂",
+    "city_id": "city_a",
+    "district_id": "dist_hub",
+    "street_id": "street_center",
+    "community_id": "community_hub",
+    "building": "1号楼",
     "chef_npc_id": "npc_chen"
   }
 }
