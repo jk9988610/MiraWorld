@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "principles": [
+    "四象：人 actor、地 place、事 record、物 thing",
+    "横切：仅 credits 一种钱",
+    "对不上的设定不收录"
+  ],
+  "actor": {
+    "kinds": ["player", "npc", "system"],
+    "ref": { "kind": "string", "id": "string", "display": "string?" },
+    "player_fields": ["handle", "city", "wallet_credits", "bio"]
+  },
+  "place": {
+    "address_levels": ["city"],
+    "match": "city + actor",
+    "spot": "optional lore only, not in address"
+  },
+  "thing": {
+    "layers": {
+      "item": "definition in items.json",
+      "stack": "holder actor + item_id + qty",
+      "offer": "seller actor + gives + price_credits (replaces SKU)"
+    }
+  },
+  "record": {
+    "types_mvp": ["order", "message", "visit", "ledger"],
+    "types_future": ["bounty", "job", "vote", "trace"],
+    "common_fields": [
+      "id",
+      "type",
+      "status",
+      "actors",
+      "place",
+      "credits",
+      "things",
+      "payload",
+      "at"
+    ],
+    "order_statuses": [
+      "created",
+      "escrowed",
+      "processing",
+      "ready",
+      "completed",
+      "settled",
+      "cancelled"
+    ]
+  },
+  "credits": {
+    "field": "wallet_credits",
+    "display_cn": "点",
+    "display_en": "credits",
+    "integer": true,
+    "withdrawable": false
+  },
+  "deprecated_terms": {
+    "SKU": "offer",
+    "shop_as_entity": "npc or player actor as seller",
+    "district": "spot flavor only",
+    "wallet_silver": "wallet_credits",
+    "lamp_oil_money": "wallet_credits"
+  }
+}

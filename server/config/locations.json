@@ -1,0 +1,101 @@
+{
+  "address_schema": {
+    "levels": ["city"],
+    "match_rule": "city + person (npc_id or player handle)",
+    "display_separator": " · ",
+    "excluded_from_address": ["district", "street", "community", "room", "grid"]
+  },
+  "cities": [
+    {
+      "id": "city_chaodeng",
+      "city": "潮灯市",
+      "summary": "主城市。MVP 出生地。",
+      "is_default": true,
+      "is_spawn": true,
+      "npcs": [
+        "npc_xiaolin",
+        "npc_chen",
+        "npc_wu",
+        "npc_he",
+        "npc_xu",
+        "npc_zhou"
+      ],
+      "explore_spots": [
+        { "id": "spot_hub", "name": "枢纽岸", "flavor": "入口一带" },
+        { "id": "spot_pier", "name": "栈桥", "flavor": "连接水岸" },
+        { "id": "spot_sunset", "name": "晚霞岸", "flavor": "湖景歇脚" },
+        { "id": "spot_market", "name": "商贸街", "flavor": "招牌林立" },
+        { "id": "spot_archive", "name": "文档塔", "flavor": "规则公示" },
+        { "id": "spot_outskirts", "name": "远郊", "flavor": "城市边缘" }
+      ],
+      "note": "explore_spots 仅文案/打卡彩蛋，不是地址段"
+    },
+    {
+      "id": "city_b",
+      "city": "B市",
+      "preview": true,
+      "npcs": []
+    },
+    {
+      "id": "city_c",
+      "city": "C市",
+      "preview": true,
+      "npcs": []
+    }
+  ],
+  "npcs": [
+    {
+      "id": "npc_xiaolin",
+      "display": "小林 · 前台",
+      "city": "潮灯市",
+      "role": "reception",
+      "greeting": "没主线。在潮灯市转转，或找陈师傅点碗面。"
+    },
+    {
+      "id": "npc_chen",
+      "display": "陈师傅",
+      "city": "潮灯市",
+      "role": "chef",
+      "greeting": "标准汤面，十五点。下单就走托管。"
+    },
+    {
+      "id": "npc_wu",
+      "display": "吴跑腿",
+      "city": "潮灯市",
+      "role": "runner",
+      "greeting": "跑腿单按市 + 收件人 handle 送。"
+    },
+    {
+      "id": "npc_he",
+      "display": "何向导",
+      "city": "潮灯市",
+      "role": "guide",
+      "greeting": "晚霞岸适合歇脚。地址？整座城市都是潮灯市。"
+    },
+    {
+      "id": "npc_xu",
+      "display": "许店员",
+      "city": "潮灯市",
+      "role": "clerk",
+      "greeting": "店还没全开。有事找陈师傅那边。"
+    },
+    {
+      "id": "npc_zhou",
+      "display": "周管理",
+      "city": "潮灯市",
+      "role": "admin",
+      "greeting": "规则很简单：地址到市，找人到名。"
+    }
+  ],
+  "system_shop": {
+    "id": "shop_chaodeng_canteen",
+    "city": "潮灯市",
+    "person": { "type": "npc", "id": "npc_chen", "display": "陈师傅" },
+    "display": "潮灯市 · 陈师傅"
+  },
+  "match_examples": {
+    "player_home": { "city": "潮灯市", "person": { "type": "player", "handle": "雾桥阿青" } },
+    "order_chef": { "city": "潮灯市", "person": { "type": "npc", "id": "npc_chen" } },
+    "mail_to": { "person": { "type": "player", "handle": "雾桥阿青" } }
+  }
+}

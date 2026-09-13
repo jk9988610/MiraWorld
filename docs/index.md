@@ -2,14 +2,14 @@
 layout: home
 
 hero:
-  name: MiraWorld
-  text: 可探索的文字世界
-  tagline: 设定即地图。在地点、势力与选择之间漫游——这是一份能当文字冒险读的世界资料。
+  name: 米拉世界
+  text: MiraWorld
+  tagline: 潮灯市……一座城、一些人、一碗面——可探索的异步文字世界。
   actions:
     - theme: brand
+      text: 进入潮灯市
+      link: /play/city
+    - theme: alt
       text: 世界概览
       link: /world/overview
-    - theme: alt
-      text: 开始探索
-      link: /world/exploration
 ---

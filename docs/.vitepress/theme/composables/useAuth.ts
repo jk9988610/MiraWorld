@@ -2,9 +2,13 @@ import { ref, computed } from 'vue'
 
 export interface AuthUser {
   id: number
-  email: string
-  display_name: string
+  handle: string
+  email: string | null
+  city: string
+  wallet_credits: number
+  bio: string
   created_at: string
+  visit_count?: number
 }
 
 const API_BASE = '/miraworld/api'
@@ -48,18 +52,14 @@ export function useAuth() {
     }
   }
 
-  async function register(email: string, password: string, displayName: string) {
+  async function register(handle: string, password: string, email?: string) {
     loading.value = true
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          display_name: displayName,
-        }),
+        body: JSON.stringify({ handle, password, email: email || null }),
       })
       user.value = await parseJson<AuthUser>(res)
       return user.value
@@ -69,14 +69,14 @@ export function useAuth() {
     }
   }
 
-  async function login(email: string, password: string) {
+  async function login(handle: string, password: string) {
     loading.value = true
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ handle, password }),
       })
       user.value = await parseJson<AuthUser>(res)
       return user.value

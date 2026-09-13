@@ -1,0 +1,10 @@
+{
+  "newbie_credits": 300,
+  "default_city": "潮灯市",
+  "onboarding_message": "没主线。在潮灯市转转，或找陈师傅点碗面。",
+  "brand": {
+    "en": "MiraWorld",
+    "zh": "米拉世界",
+    "tagline_zh": "一座城、一些人、一碗面"
+  }
+}

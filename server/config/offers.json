@@ -1,0 +1,13 @@
+{
+  "offers": [
+    {
+      "id": "offer_standard_noodle",
+      "seller": { "kind": "npc", "id": "npc_chen", "display": "陈师傅" },
+      "place": { "city": "潮灯市" },
+      "gives": { "item_id": "item_noodle_bowl", "qty": 1 },
+      "price_credits": 15,
+      "display": "标准汤面",
+      "active": true
+    }
+  ]
+}
