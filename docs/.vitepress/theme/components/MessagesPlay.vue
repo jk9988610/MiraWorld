@@ -57,7 +57,10 @@ async function openMessage(msg: MessageData) {
         </button>
       </li>
     </ul>
-    <p v-else class="mw-dim">还没有通知。点面确认收进背包后，陈师傅会在这里提醒你。</p>
+    <p v-else class="mw-dim">
+      还没有通知。去<a href="/miraworld/play/chen.html">陈师傅</a>点面，
+      面好了会在这里叫你<strong>确认收进背包</strong>。
+    </p>
   </div>
 </template>
 

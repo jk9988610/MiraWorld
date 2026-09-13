@@ -6,11 +6,21 @@ import uuid
 
 from fastapi import HTTPException
 
+from config_loader import game_messages
 from db import db, utc_now
 from schemas.order import OrderListResponse, OrderPublic
 from services.catalog import get_offer, item_display
 from services.inventory import add_stack
 from services.messages import create_message
+
+
+def _order_copy(key: str, **kwargs: str) -> str:
+    templates = game_messages().get("order", {})
+    tpl = templates.get(key, "")
+    try:
+        return tpl.format(**kwargs)
+    except KeyError:
+        return tpl
 
 
 def _row_to_order(row: sqlite3.Row, offer_display: str = "", item_id: str = "", item_qty: int = 0) -> OrderPublic:
@@ -125,6 +135,16 @@ def place_order(player_id: int, offer_id: str) -> OrderPublic:
             ),
         )
 
+        create_message(
+            conn,
+            to_player_id=player_id,
+            from_kind="npc",
+            from_id=seller.get("id"),
+            body=_order_copy("received", display=display),
+            ref_type="order",
+            ref_id=order_id,
+        )
+
         ready_at = utc_now()
         conn.execute(
             """
@@ -139,7 +159,7 @@ def place_order(player_id: int, offer_id: str) -> OrderPublic:
             to_player_id=player_id,
             from_kind="npc",
             from_id=seller.get("id"),
-            body=f"{display}好了，可以取餐。",
+            body=_order_copy("ready", display=display),
             ref_type="order",
             ref_id=order_id,
         )
@@ -178,7 +198,7 @@ def pickup_order(player_id: int, order_id: str) -> OrderPublic:
     with db() as conn:
         row = _get_order_row(conn, order_id, player_id)
         if row["status"] != "ready":
-            raise HTTPException(status_code=400, detail="订单还不能取餐")
+            raise HTTPException(status_code=400, detail=_order_copy("pickup_blocked"))
         offer = get_offer(row["offer_id"])
         _, item_id, item_qty = _offer_meta(offer)
         add_stack(conn, player_id, item_id, item_qty)

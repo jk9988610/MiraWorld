@@ -57,7 +57,10 @@ async function saveBio() {
         {{ v.city }}<template v-if="v.spot_id"> · {{ v.spot_id }}</template>
       </li>
     </ul>
-    <p v-else class="mw-dim">还没有足迹。</p>
+    <p v-else class="mw-dim">
+      还没有足迹。去<a href="/miraworld/play/city.html">潮灯市地图</a>打卡，
+      逛点里每个地方都有第一次到访的小句子。
+    </p>
   </div>
 </template>
 

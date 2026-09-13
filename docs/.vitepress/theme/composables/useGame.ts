@@ -8,6 +8,7 @@ export interface Npc {
   city: string
   role?: string
   greeting?: string
+  extra?: string
 }
 
 export interface ExploreSpot {
@@ -102,7 +103,7 @@ export function useGame() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ city, spot_id: spotId ?? null }),
     })
-    return parseJson<{ first_visit: boolean; city: string; spot_id?: string }>(res)
+    return parseJson<{ first_visit: boolean; city: string; spot_id?: string | null; message?: string }>(res)
   }
 
   async function loadCatalog() {

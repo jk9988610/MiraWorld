@@ -1,0 +1,10 @@
+{
+  "order": {
+    "received": "陈师傅：收到「{display}」的单了，灶上咕嘟咕嘟。",
+    "ready": "「{display}」好了。点进订单，确认收进背包。",
+    "pickup_blocked": "还不能收进背包，请稍后再试。"
+  },
+  "npc_from_display": {
+    "npc_chen": "陈师傅"
+  }
+}

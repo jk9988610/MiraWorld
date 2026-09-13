@@ -33,7 +33,10 @@ onMounted(async () => {
         <span class="mw-qty">× {{ s.qty }}</span>
       </li>
     </ul>
-    <p v-else class="mw-dim">背包是空的。去<a href="/miraworld/play/chen.html">陈师傅</a>点一碗面。</p>
+    <p v-else class="mw-dim">
+      背包还空着。去<a href="/miraworld/play/chen.html">陈师傅</a>点一碗面，
+      通知里会叫你<strong>确认收进背包</strong>。
+    </p>
     <p class="mw-link">
       <a href="/miraworld/play/chen.html">→ 陈师傅食堂</a>
     </p>

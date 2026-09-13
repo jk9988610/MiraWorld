@@ -71,6 +71,10 @@ async function pickup() {
         <li :class="{ done: order.status === 'settled' }">确认收进背包</li>
       </ol>
 
+      <p v-if="order.status === 'ready'" class="mw-hint">
+        陈师傅说面好了。点下面按钮，确认收进背包。
+      </p>
+
       <button
         v-if="order.status === 'ready'"
         type="button"
@@ -112,6 +116,12 @@ async function pickup() {
 
 .mw-steps li.done {
   color: var(--vp-c-text-1);
+}
+
+.mw-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--vp-c-text-2);
 }
 
 .mw-btn {

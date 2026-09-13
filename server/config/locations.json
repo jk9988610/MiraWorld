@@ -9,7 +9,7 @@
     {
       "id": "city_chaodeng",
       "city": "潮灯市",
-      "summary": "主城市。MVP 出生地。",
+      "summary": "主城市。你落在这里，面汤和潮风一起招呼人。",
       "is_default": true,
       "is_spawn": true,
       "npcs": [
@@ -21,12 +21,48 @@
         "npc_zhou"
       ],
       "explore_spots": [
-        { "id": "spot_hub", "name": "枢纽岸", "flavor": "入口一带" },
-        { "id": "spot_pier", "name": "栈桥", "flavor": "连接水岸" },
-        { "id": "spot_sunset", "name": "晚霞岸", "flavor": "湖景歇脚" },
-        { "id": "spot_market", "name": "商贸街", "flavor": "招牌林立" },
-        { "id": "spot_archive", "name": "文档塔", "flavor": "规则公示" },
-        { "id": "spot_outskirts", "name": "远郊", "flavor": "城市边缘" }
+        {
+          "id": "spot_hub",
+          "name": "枢纽岸",
+          "flavor": "入口一带",
+          "first_visit": "枢纽岸的风从水面折回来，你第一次站在这，城市像刚醒。",
+          "revisit": "枢纽岸还是老样子。潮气贴在脸上，像有人轻轻拍肩。"
+        },
+        {
+          "id": "spot_pier",
+          "name": "栈桥",
+          "flavor": "连接水岸",
+          "first_visit": "木板在脚下轻轻响。第一次走栈桥，远处有人声，却不必回头。",
+          "revisit": "栈桥记得你来过。水拍岸的节奏，和上次一样慢。"
+        },
+        {
+          "id": "spot_sunset",
+          "name": "晚霞岸",
+          "flavor": "湖景歇脚",
+          "first_visit": "湖面上拖着一道旧日的金。第一次到晚霞岸，你决定先歇一歇。",
+          "revisit": "晚霞岸的风还是软的。适合什么都不做，只等面好了去读通知。"
+        },
+        {
+          "id": "spot_market",
+          "name": "商贸街",
+          "flavor": "招牌林立",
+          "first_visit": "招牌在潮雾里半隐半现。第一次逛商贸街，陈师傅的汤面香从某条巷口飘出来。",
+          "revisit": "商贸街依旧热闹。你熟门熟路，知道食堂在哪边。"
+        },
+        {
+          "id": "spot_archive",
+          "name": "文档塔",
+          "flavor": "规则公示",
+          "first_visit": "文档塔里堆着馆规和旧记录。第一次来，你看见一行小字：点、背包、通知，够用了。",
+          "revisit": "文档塔安静如故。规则没吓到你，世界反而更清楚了一点。"
+        },
+        {
+          "id": "spot_outskirts",
+          "name": "远郊",
+          "flavor": "城市边缘",
+          "first_visit": "远郊的风更干一些。第一次走到城边，回头还能看见潮灯市的光。",
+          "revisit": "远郊还是城的边。走累了就回去，陈师傅的面还在等你。"
+        }
       ],
       "note": "explore_spots 仅文案/打卡彩蛋，不是地址段"
     },
@@ -49,21 +85,23 @@
       "display": "小林 · 前台",
       "city": "潮灯市",
       "role": "reception",
-      "greeting": "没主线。在潮灯市转转，或找陈师傅点碗面。"
+      "greeting": "没主线。在潮灯市转转，或找陈师傅点碗面。",
+      "extra": "第一次来？地图里点逛点，会有小惊喜；面好了去底栏「通知」。"
     },
     {
       "id": "npc_chen",
       "display": "陈师傅",
       "city": "潮灯市",
       "role": "chef",
-      "greeting": "标准汤面，十五点。下单就走托管。"
+      "greeting": "标准汤面，十五点。下单走托管，好了我会发通知。",
+      "extra": "汤要咕嘟一会儿。你去逛两圈，回来点「确认收进背包」就行。"
     },
     {
       "id": "npc_wu",
       "display": "吴跑腿",
       "city": "潮灯市",
       "role": "runner",
-      "greeting": "跑腿单按市 + 收件人 handle 送。"
+      "greeting": "我在这边跑腿传话。配送那套还没开，有事找陈师傅或看通知。"
     },
     {
       "id": "npc_he",
@@ -77,14 +115,14 @@
       "display": "许店员",
       "city": "潮灯市",
       "role": "clerk",
-      "greeting": "店还没全开。有事找陈师傅那边。"
+      "greeting": "店还没全开。想吃东西，陈师傅那边最稳。"
     },
     {
       "id": "npc_zhou",
       "display": "周管理",
       "city": "潮灯市",
       "role": "admin",
-      "greeting": "规则很简单：地址到市，找人到名。"
+      "greeting": "规则很简单：地址到市，找人到名；物进背包，钱用点。"
     }
   ],
   "system_shop": {

@@ -1,7 +1,9 @@
 {
   "newbie_credits": 300,
   "default_city": "潮灯市",
-  "onboarding_message": "没主线。在潮灯市转转，或找陈师傅点碗面。",
+  "onboarding_message": "欢迎来到潮灯市。没主线——转转地图，或找陈师傅点碗面。",
+  "city_first_visit": "潮灯市记下了你的脚步。枢纽岸的风有点潮，陈师傅那边永远飘着面汤味。",
+  "city_revisit": "你又回到潮灯市。老地方还在，通知在底栏等你。",
   "brand": {
     "en": "MiraWorld",
     "zh": "米拉世界",
