@@ -191,6 +191,36 @@ export interface EconomyStatus {
   config: { min_wage: number; min_subsidy: number; welfare_grant: number }
 }
 
+export interface CapitalStatus {
+  assets: {
+    wallet_credits: number
+    shop_value: number
+    inventory_value: number
+    total: number
+  }
+  company: {
+    id: string
+    display_name: string
+    city: string
+    owner_player_id: number
+    created_at: string
+  } | null
+  has_shop: boolean
+  last_grant: {
+    grant_date: string
+    amount: number
+    asset_total: number
+    asset_pct: number
+    created_at: string
+  } | null
+  can_claim_today: boolean
+  config: {
+    daily_investment_base: number
+    asset_pct_min: number
+    asset_pct_max: number
+  }
+}
+
 export interface VisitResult {
   first_visit: boolean
   city: string
@@ -493,6 +523,29 @@ export function useGame() {
     return parseJson<{ institution_id: string; items: SpotlightItem[] }>(res)
   }
 
+  async function loadCapitalStatus() {
+    const res = await fetch(`${API_BASE}/capital/status`, { credentials: 'include' })
+    return parseJson<CapitalStatus>(res)
+  }
+
+  async function claimDailyInvestment() {
+    const res = await fetch(`${API_BASE}/capital/daily-investment`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<{ ok: boolean; grant: NonNullable<CapitalStatus['last_grant']>; wallet_credits: number }>(res)
+  }
+
+  async function createCompany(displayName: string) {
+    const res = await fetch(`${API_BASE}/capital/company`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ display_name: displayName }),
+    })
+    return parseJson<NonNullable<CapitalStatus['company']>>(res)
+  }
+
   return {
     world,
     loadWorld,
@@ -528,5 +581,8 @@ export function useGame() {
     sendMessage,
     loadEconomyStatus,
     loadSpotlight,
+    loadCapitalStatus,
+    claimDailyInvestment,
+    createCompany,
   }
 }

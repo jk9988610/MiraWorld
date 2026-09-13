@@ -53,3 +53,7 @@ def economy_pop_groups() -> dict:
 
 def pop_spotlight_names() -> dict:
     return load_json("names/pop_spotlight.json")
+
+
+def capitalist_economy() -> dict:
+    return load_json("economy/capitalist.json")

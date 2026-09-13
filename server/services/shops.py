@@ -105,10 +105,12 @@ def apply_shop(player_id: int, display_name: str) -> ShopPublic:
         )
         conn.execute(
             """
-            INSERT INTO shops (player_id, display_name, city, open, created_at)
-            VALUES (?, ?, '潮灯市', 1, ?)
+            INSERT INTO shops (player_id, display_name, city, open, created_at, company_id)
+            VALUES (?, ?, '潮灯市', 1, ?, (
+                SELECT id FROM companies WHERE owner_player_id = ? LIMIT 1
+            ))
             """,
-            (player_id, display_name.strip(), now),
+            (player_id, display_name.strip(), now, player_id),
         )
         row = conn.execute(
             "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",

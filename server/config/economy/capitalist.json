@@ -1,0 +1,13 @@
+{
+  "daily_investment_base": 200000,
+  "daily_investment_asset_pct_min": 0.05,
+  "daily_investment_asset_pct_max": 0.10,
+  "shop_asset_value": 100,
+  "stack_unit_value": {
+    "food": 10,
+    "consumable": 10,
+    "material": 5,
+    "tool": 15,
+    "default": 3
+  }
+}

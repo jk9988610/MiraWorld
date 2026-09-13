@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from auth_util import JWT_SECRET
 from db import init_db
-from routers import auth, bounties, catalog, economy, me, records, shop, stacks, world
+from routers import auth, bounties, capital, catalog, economy, me, records, shop, stacks, world
 
 app = FastAPI(title="米拉世界 MiraWorld", version="1.0.0-mvp")
 
@@ -29,6 +29,7 @@ app.include_router(shop.router)
 app.include_router(bounties.router)
 app.include_router(stacks.router)
 app.include_router(economy.router)
+app.include_router(capital.router)
 
 
 @app.on_event("startup")
