@@ -17,6 +17,7 @@
     "smoke:auto": "python3 -u deploy/smoke_demo.py --v14",
     "smoke:bounty": "python3 -u deploy/smoke_demo.py --v15",
     "smoke:economy": "python3 -u deploy/smoke_demo.py --v20",
+    "smoke:capital": "python3 -u deploy/smoke_demo.py --v21",
     "economy:cron": "python3 -u deploy/economy_tick_cron.py --install-cron",
     "purge:test-accounts": "python3 -u deploy/purge_test_accounts.py"
   },

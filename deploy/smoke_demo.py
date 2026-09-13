@@ -82,6 +82,65 @@ def run_v20_once(base: str, run_index: int) -> None:
     )
 
 
+def run_v21_once(base: str, run_index: int) -> None:
+    jar = CookieJar()
+    opener = build_opener(HTTPCookieProcessor(jar))
+    handle = f"资{run_index:02d}{uuid.uuid4().hex[:4]}"
+
+    health = api(base, opener, "GET", "/health")
+    if not health.get("ok"):
+        raise DemoError(f"health check failed: {health}")
+
+    player = api(
+        base,
+        opener,
+        "POST",
+        "/auth/register",
+        {"handle": handle, "password": PASSWORD},
+    )
+    if player.get("wallet_credits") != 300:
+        raise DemoError(f"expected wallet 300, got {player.get('wallet_credits')}")
+
+    status = api(base, opener, "GET", "/capital/status")
+    if not status.get("can_claim_today"):
+        raise DemoError(f"expected can_claim_today: {status}")
+    assets = status.get("assets") or {}
+    if int(assets.get("total", 0)) < 300:
+        raise DemoError(f"unexpected asset total: {assets}")
+
+    claim = api(base, opener, "POST", "/capital/daily-investment", None)
+    grant = claim.get("grant") or {}
+    amount = int(grant.get("amount", 0))
+    base_cfg = int((status.get("config") or {}).get("daily_investment_base", 200000))
+    if amount < base_cfg:
+        raise DemoError(f"daily investment below base: {amount} < {base_cfg}")
+    wallet = int(claim.get("wallet_credits", 0))
+    if wallet != 300 + amount:
+        raise DemoError(f"wallet after grant expected {300 + amount}, got {wallet}")
+
+    try:
+        api(base, opener, "POST", "/capital/daily-investment", None)
+        raise DemoError("second claim should fail")
+    except DemoError as exc:
+        if "409" not in str(exc):
+            raise
+
+    company = api(
+        base,
+        opener,
+        "POST",
+        "/capital/company",
+        {"display_name": f"资{run_index}号公司"},
+    )
+    if not company.get("id"):
+        raise DemoError(f"company create failed: {company}")
+
+    print(
+        f"  v2.1 run {run_index}: OK grant={amount} company={company.get('display_name')}",
+        flush=True,
+    )
+
+
 def api(base: str, opener, method: str, path: str, body: dict | None = None, extra_headers: dict | None = None) -> dict:
     url = f"{base.rstrip('/')}{path}"
     data = None
@@ -471,6 +530,11 @@ def main() -> int:
         help="Number of full demo passes (default: 5)",
     )
     parser.add_argument(
+        "--v21",
+        action="store_true",
+        help="Run v2.1 daily investment + company demo",
+    )
+    parser.add_argument(
         "--v20",
         action="store_true",
         help="Run v2.0 economy tick demo",
@@ -507,7 +571,10 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    if args.v20:
+    if args.v21:
+        label = "v2.1 capital"
+        runner = run_v21_once
+    elif args.v20:
         label = "v2.0 economy"
         runner = run_v20_once
     elif args.v15:

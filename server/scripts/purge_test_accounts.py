@@ -13,7 +13,7 @@ from db import db  # noqa: E402
 
 # Handles created by deploy/smoke_demo.py (single-char prefix + short suffix).
 SMOKE_HANDLE_RE = re.compile(
-    r"^(?:烟|店|客|班|委|接)[0-9a-zA-Z]{0,8}$"
+    r"^(?:烟|店|客|班|委|接|资)[0-9a-zA-Z]{0,8}$"
 )
 SMOKE_SHOP_RE = re.compile(r"^(?:烟\d+号食堂|当班\d+号)$")
 

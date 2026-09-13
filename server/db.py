@@ -268,6 +268,7 @@ def init_db() -> None:
         _migrate_orders_v20(conn)
         _create_economy_tables(conn)
         _run_v20_p3_migrations(conn)
+        _create_v21_capital_tables(conn)
         _seed_economy_if_empty(conn)
 
 
@@ -457,6 +458,39 @@ def _run_v20_p3_migrations(conn: sqlite3.Connection) -> None:
             (utc_now(),),
         )
         _meta_set(conn, "pop_unemployed_pg09_pg10")
+
+
+def _create_v21_capital_tables(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS companies (
+            id TEXT PRIMARY KEY,
+            owner_player_id INTEGER NOT NULL UNIQUE,
+            display_name TEXT NOT NULL,
+            city TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (owner_player_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS player_daily_grants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            grant_date TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            asset_total INTEGER NOT NULL,
+            asset_pct REAL NOT NULL,
+            created_at TEXT NOT NULL,
+            UNIQUE (player_id, grant_date),
+            FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    shop_cols = _columns(conn, "shops")
+    if "company_id" not in shop_cols:
+        conn.execute("ALTER TABLE shops ADD COLUMN company_id TEXT")
 
 
 def _seed_economy_if_empty(conn: sqlite3.Connection) -> None:

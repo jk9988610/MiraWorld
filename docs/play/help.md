@@ -113,3 +113,15 @@ title: 怎么玩
 **UI：** [城市经营](/play/economy.html) 仪表盘 · 陈师傅页 Spotlight 来客列表
 
 **运维：** 日 tick cron → `npm run economy:cron`；清理 smoke 测试号 → `npm run purge:test-accounts`
+
+## v2.1 资本家（API 已上线）
+
+外生日投不计入市民账本。公式：`200_000 + (5%～10%) × 总资产`（总资产 = 钱包 + 店估值 + 库存估值）。
+
+| API | 说明 |
+|-----|------|
+| `GET /capital/status` | 总资产、可否领取 |
+| `POST /capital/daily-investment` | 领取今日日投（每日一次） |
+| `POST /capital/company` | 登记公司（一玩家一公司） |
+
+**UI：** [资本家日投](/play/capital.html) · 验收：`npm run smoke:capital`
