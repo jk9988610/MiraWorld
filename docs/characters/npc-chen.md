@@ -13,4 +13,4 @@
 
 ## 相关
 
-- [A区 · 枢纽站](/places/zone-a-hub)
+- [世界概览](/world/overview)
