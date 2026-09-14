@@ -15,7 +15,7 @@ export default defineConfig({
   lang: 'zh-Hans',
   title: '米拉世界',
   titleTemplate: ':title · 米拉世界',
-  description: '米拉世界 MiraWorld — 潮灯市可探索的异步文字世界',
+  description: '米拉世界 MiraWorld — 潮灯市的城市生活、工作与公共记忆',
   base: '/miraworld/',
   cleanUrls: false,
   themeConfig: {

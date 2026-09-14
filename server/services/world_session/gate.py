@@ -8,7 +8,7 @@ from db import db, utc_now
 from fastapi import HTTPException
 from services.world_session.constants import DEFAULT_CITY, SHARED_WORLD_ID
 from services.world_session.schedule import ensure_schedule
-from services.world_session.multi_clock import get_multi_clock, set_multi_speed
+from services.world_session.multi_clock import get_multi_clock
 
 
 def _save_row(row: sqlite3.Row) -> dict:
@@ -353,15 +353,11 @@ def set_speed(player_id: int, speed: str) -> dict:
             raise HTTPException(status_code=400, detail="尚未进入任何模式")
         save = _get_save(conn, player_id, sess["active_save_id"])
         if save["scope"] == "multi":
-            if speed not in {"slow", "mid", "fast", "fastest"}:
-                raise HTTPException(status_code=400, detail="多人模式支持慢、中、快、急速")
-        elif speed not in {"pause", "slow", "mid", "fast", "fastest"}:
+            raise HTTPException(status_code=400, detail="多人模式速度固定为中速")
+        if speed not in {"pause", "slow", "mid", "fast", "fastest"}:
             raise HTTPException(status_code=400, detail="速度无效")
-        else:
-            conn.execute(
-                "UPDATE world_saves SET speed = ? WHERE id = ?",
-                (speed, save["id"]),
-            )
-    if save["scope"] == "multi":
-        set_multi_speed(speed)
+        conn.execute(
+            "UPDATE world_saves SET speed = ? WHERE id = ?",
+            (speed, save["id"]),
+        )
     return get_clock(player_id)

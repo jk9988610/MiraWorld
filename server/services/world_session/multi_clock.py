@@ -34,6 +34,8 @@ def _ensure_clock(conn) -> None:
     conn.execute("CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
     day_row = conn.execute("SELECT value FROM app_meta WHERE key = ?", (_CLOCK_DAY,)).fetchone()
     if day_row is not None:
+        # Multiplayer speed is server-controlled and permanently fixed at mid speed.
+        conn.execute("INSERT OR REPLACE INTO app_meta(key, value) VALUES (?, ?)", (_CLOCK_SPEED, DEFAULT_SPEED))
         return
     count = conn.execute(
         "SELECT COUNT(*) AS c FROM economy_ticks WHERE city = ? AND world_id = ?",
@@ -61,15 +63,6 @@ def get_multi_clock() -> dict:
         "speed": speed if speed in SPEED_SECONDS else DEFAULT_SPEED,
         "last_real": values.get(_CLOCK_LAST_REAL),
     }
-
-
-def set_multi_speed(speed: str) -> None:
-    if speed not in SPEED_SECONDS and speed != "pause":
-        raise ValueError("invalid multiplayer speed")
-    with db() as conn:
-        _ensure_clock(conn)
-        conn.execute("INSERT OR REPLACE INTO app_meta(key, value) VALUES (?, ?)", (_CLOCK_SPEED, speed))
-        conn.execute("INSERT OR REPLACE INTO app_meta(key, value) VALUES (?, ?)", (_CLOCK_LAST_REAL, utc_now()))
 
 
 def advance_due_day() -> bool:

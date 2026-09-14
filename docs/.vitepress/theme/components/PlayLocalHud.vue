@@ -85,7 +85,7 @@ async function onAdvanceDay() {
 }
 
 async function onSpeed(speed: string) {
-  if (!['solo', 'multi'].includes(hudScope.value) || speedBusy.value) return
+  if (hudScope.value !== 'solo' || speedBusy.value) return
   speedBusy.value = true
   try {
     const clock = await setWorldSpeed(speed)
@@ -138,12 +138,6 @@ onUnmounted(() => {
         <button type="button" class="mw-hud-btn" :disabled="speedBusy" @click.prevent="onSpeed('slow')">慢</button>
         <button type="button" class="mw-hud-btn" :disabled="speedBusy" @click.prevent="onSpeed('mid')">中</button>
         <button type="button" class="mw-hud-btn" :disabled="speedBusy" @click.prevent="onSpeed('fast')">快</button>
-      </template>
-      <template v-else-if="hudScope === 'multi'">
-        <button type="button" class="mw-hud-btn" :disabled="speedBusy" @click.prevent="onSpeed('slow')">慢</button>
-        <button type="button" class="mw-hud-btn" :disabled="speedBusy" @click.prevent="onSpeed('mid')">中</button>
-        <button type="button" class="mw-hud-btn" :disabled="speedBusy" @click.prevent="onSpeed('fast')">快</button>
-        <button type="button" class="mw-hud-btn" :disabled="speedBusy" @click.prevent="onSpeed('fastest')">急速</button>
       </template>
       <span v-else class="mw-hud-item mw-dim">多人</span>
       <span v-if="hudError" class="mw-hud-err" :title="hudError">!</span>
