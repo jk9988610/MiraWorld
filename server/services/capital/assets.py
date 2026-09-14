@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 
 from config_loader import capitalist_economy, items
+from services.capital.institution import list_company_institutions
 
 
 def _stack_unit_value(tags: set[str], cfg: dict) -> int:
@@ -28,6 +29,18 @@ def player_total_assets(conn: sqlite3.Connection, player_id: int) -> dict:
     ).fetchone()
     wallet = int(wallet_row["wallet_credits"]) if wallet_row else 0
 
+    company = conn.execute(
+        """
+        SELECT id, wallet_credits FROM companies WHERE owner_player_id = ?
+        """,
+        (player_id,),
+    ).fetchone()
+    company_wallet = int(company["wallet_credits"]) if company else 0
+    institution_wallet = 0
+    if company:
+        for inst in list_company_institutions(conn, company["id"]):
+            institution_wallet += int(inst["wallet_credits"])
+
     shop_row = conn.execute(
         "SELECT player_id FROM shops WHERE player_id = ?",
         (player_id,),
@@ -45,9 +58,11 @@ def player_total_assets(conn: sqlite3.Connection, player_id: int) -> dict:
         unit = _stack_unit_value(tags, cfg)
         inventory_value += unit * int(row["qty"])
 
-    total = wallet + shop_value + inventory_value
+    total = wallet + company_wallet + institution_wallet + shop_value + inventory_value
     return {
         "wallet_credits": wallet,
+        "company_wallet": company_wallet,
+        "institution_wallet": institution_wallet,
         "shop_value": shop_value,
         "inventory_value": inventory_value,
         "total": total,

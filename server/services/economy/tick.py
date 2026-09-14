@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import random
 import sqlite3
-import uuid
 from datetime import UTC, datetime
 
 from config_loader import items
@@ -15,7 +14,10 @@ from services.economy.config import (
     min_wage,
     welfare_grant,
 )
-from services.economy.spotlight import add_spotlight_for_order
+from services.economy.market_orders import place_market_order
+from services.economy.procurement import run_institution_procurement
+from services.economy.production import run_institution_production
+from services.l0.hub import get_hub_status, run_l0_tick
 
 
 def _today() -> str:
@@ -40,174 +42,16 @@ def _offer_score(offer: dict, pref: dict[str, float], tag_map: dict[str, set[str
     return score / price
 
 
-def _affordable_offers(city: str, wallet: int) -> list[dict]:
+def _affordable_offers(conn: sqlite3.Connection, city: str, wallet: int) -> list[dict]:
     from services.catalog import active_offers
 
     offers = [
         o
-        for o in active_offers(city)
-        if o.get("seller", {}).get("kind") == "npc"
-        and int(o.get("price_credits", 0)) <= wallet
+        for o in active_offers(city, conn=conn)
+        if int(o.get("price_credits", 0)) <= wallet
         and o.get("active", True)
     ]
     return offers
-
-
-def _credit_seller(
-    conn: sqlite3.Connection,
-    *,
-    seller_kind: str,
-    seller_id: str,
-    offer_id: str,
-    price: int,
-    order_id: str,
-) -> str | None:
-    institution_id = None
-    if seller_kind == "npc":
-        row = conn.execute(
-            """
-            SELECT id FROM institutions
-            WHERE owner_kind = 'system' AND owner_id = ?
-            LIMIT 1
-            """,
-            (seller_id,),
-        ).fetchone()
-        if row:
-            institution_id = row["id"]
-            conn.execute(
-                "UPDATE institutions SET wallet_credits = wallet_credits + ? WHERE id = ?",
-                (price, institution_id),
-            )
-            add_economy_ledger(
-                conn,
-                account_kind="institution",
-                account_id=institution_id,
-                amount=price,
-                entry_type="sale",
-                ref_type="order",
-                ref_id=order_id,
-            )
-    elif seller_kind == "player":
-        conn.execute(
-            "UPDATE users SET wallet_credits = wallet_credits + ? WHERE id = ?",
-            (price, int(seller_id)),
-        )
-        conn.execute(
-            """
-            INSERT INTO ledger_entries (player_id, amount, type, ref_type, ref_id, created_at)
-            VALUES (?, ?, 'sale', 'order', ?, ?)
-            """,
-            (int(seller_id), price, order_id, utc_now()),
-        )
-    else:
-        row = conn.execute(
-            "SELECT id FROM institutions WHERE offer_id = ? LIMIT 1",
-            (offer_id,),
-        ).fetchone()
-        if row:
-            institution_id = row["id"]
-            conn.execute(
-                "UPDATE institutions SET wallet_credits = wallet_credits + ? WHERE id = ?",
-                (price, institution_id),
-            )
-            add_economy_ledger(
-                conn,
-                account_kind="institution",
-                account_id=institution_id,
-                amount=price,
-                entry_type="sale",
-                ref_type="order",
-                ref_id=order_id,
-            )
-    return institution_id
-
-
-def _place_pop_order(
-    conn: sqlite3.Connection,
-    *,
-    group_id: str,
-    offer: dict,
-    rng: random.Random,
-) -> dict | None:
-    price = int(offer["price_credits"])
-    group = conn.execute(
-        "SELECT wallet_credits, job_display, city FROM pop_groups WHERE id = ?",
-        (group_id,),
-    ).fetchone()
-    if group is None or int(group["wallet_credits"]) < price:
-        return None
-
-    seller = offer.get("seller", {})
-    seller_kind = seller.get("kind", "npc")
-    seller_id = seller.get("id", "")
-    place = offer.get("place", {})
-    city = place.get("city", group["city"])
-    display = offer.get("display", offer["id"])
-    gives = offer.get("gives", {})
-    item_id = gives.get("item_id", "")
-    item_qty = int(gives.get("qty", 1))
-    order_id = f"ord_{uuid.uuid4().hex[:12]}"
-    now = utc_now()
-    payload = json.dumps(
-        {"display": display, "item_id": item_id, "item_qty": item_qty},
-        ensure_ascii=False,
-    )
-
-    conn.execute(
-        "UPDATE pop_groups SET wallet_credits = wallet_credits - ?, updated_at = ? WHERE id = ?",
-        (price, now, group_id),
-    )
-    add_economy_ledger(
-        conn,
-        account_kind="pop_group",
-        account_id=group_id,
-        amount=-price,
-        entry_type="purchase",
-        ref_type="order",
-        ref_id=order_id,
-    )
-
-    conn.execute(
-        """
-        INSERT INTO orders (
-            id, buyer_kind, buyer_id, buyer_group_id, seller_kind, seller_id, city,
-            offer_id, status, price_credits, escrow_credits, payload_json,
-            created_at, updated_at
-        ) VALUES (?, 'pop_group', NULL, ?, ?, ?, ?, ?, 'settled', ?, ?, ?, ?, ?)
-        """,
-        (
-            order_id,
-            group_id,
-            seller_kind,
-            seller_id,
-            city,
-            offer["id"],
-            price,
-            price,
-            payload,
-            now,
-            now,
-        ),
-    )
-
-    institution_id = _credit_seller(
-        conn,
-        seller_kind=seller_kind,
-        seller_id=seller_id,
-        offer_id=offer["id"],
-        price=price,
-        order_id=order_id,
-    )
-    if institution_id and group["job_display"]:
-        add_spotlight_for_order(
-            conn,
-            institution_id=institution_id,
-            pop_group_id=group_id,
-            job_display=group["job_display"],
-            order_id=order_id,
-            rng=rng,
-        )
-    return {"order_id": order_id, "price": price, "offer_id": offer["id"]}
 
 
 def _run_payroll(conn: sqlite3.Connection, city: str) -> dict:
@@ -401,11 +245,18 @@ def _run_purchases(conn: sqlite3.Connection, city: str, rng: random.Random) -> d
         pref = json.loads(group["pref_json"] or "{}")
         purchases = 0
         while purchases < max_n:
-            offers = _affordable_offers(city, wallet)
+            offers = _affordable_offers(conn, city, wallet)
             if not offers:
                 break
             offers.sort(key=lambda o: _offer_score(o, pref, tag_map), reverse=True)
-            placed = _place_pop_order(conn, group_id=group["id"], offer=offers[0], rng=rng)
+            placed = place_market_order(
+                conn,
+                buyer_kind="pop_group",
+                buyer_group_id=group["id"],
+                buyer_institution_id=None,
+                offer=offers[0],
+                rng=rng,
+            )
             if placed is None:
                 break
             orders.append(placed)
@@ -431,14 +282,20 @@ def run_daily_tick(city: str = "潮灯市", *, force: bool = False) -> dict:
                 "tick_date": tick_date,
             }
 
+        l0 = run_l0_tick(conn, city)
+        production = run_institution_production(conn, city)
         payroll = _run_payroll(conn, city)
         welfare = _run_welfare(conn, city, tick_date)
         purchases = _run_purchases(conn, city, rng)
+        procurement = run_institution_procurement(conn, city, rng)
 
         summary = {
+            "l0": l0,
+            "production": production,
             "payroll": payroll,
             "welfare": welfare,
             "purchases": {"count": purchases["orders"]},
+            "procurement": {"count": procurement["orders"]},
         }
         now = utc_now()
         if existing:
@@ -468,8 +325,6 @@ def run_daily_tick(city: str = "潮灯市", *, force: bool = False) -> dict:
 
 
 def get_economy_status(city: str = "潮灯市") -> dict:
-    from db import db
-
     with db() as conn:
         institutions = conn.execute(
             """
@@ -482,7 +337,7 @@ def get_economy_status(city: str = "潮灯市") -> dict:
         groups = conn.execute(
             """
             SELECT id, headcount, wallet_credits, primary_institution_id,
-                   job_type, job_display
+                   job_type, job_display, satisfaction
             FROM pop_groups WHERE city = ?
             ORDER BY id
             """,
@@ -505,6 +360,7 @@ def get_economy_status(city: str = "潮灯市") -> dict:
             """,
             (city,),
         ).fetchone()
+        hub = get_hub_status(conn, city)
 
     employed_count = sum(1 for g in groups if g["primary_institution_id"])
     unemployed_count = len(groups) - employed_count
@@ -526,9 +382,12 @@ def get_economy_status(city: str = "潮灯市") -> dict:
     payroll = last_summary.get("payroll", {})
     welfare = last_summary.get("welfare", {})
     purchases = last_summary.get("purchases", {})
+    production = last_summary.get("production", {})
+    l0 = last_summary.get("l0", {})
 
     return {
         "city": city,
+        "hub": hub,
         "institutions": [
             {**dict(r), "open": bool(r["open"])} for r in institutions
         ],
@@ -560,6 +419,8 @@ def get_economy_status(city: str = "潮灯市") -> dict:
             "last_subsidy_groups": int(welfare.get("subsidized_groups", 0)),
             "last_welfare_granted": int(welfare.get("granted", 0)),
             "last_purchases": int(purchases.get("count", 0)),
+            "last_production_items": int(production.get("items", 0)),
+            "last_l0_restocked": int(l0.get("restocked_units", 0)),
             "welfare_fund_balance": int(fund["balance"]) if fund else 0,
         },
         "config": {

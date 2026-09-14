@@ -226,9 +226,10 @@ def place_order(player_id: int, offer_id: str) -> OrderPublic:
         conn.execute(
             """
             INSERT INTO orders (
-                id, buyer_kind, buyer_id, buyer_group_id, seller_kind, seller_id, city, offer_id, status,
+                id, buyer_kind, buyer_id, buyer_group_id, buyer_institution_id,
+                seller_kind, seller_id, city, offer_id, status,
                 price_credits, escrow_credits, payload_json, created_at, updated_at
-            ) VALUES (?, 'player', ?, NULL, ?, ?, ?, ?, 'escrowed', ?, ?, ?, ?, ?)
+            ) VALUES (?, 'player', ?, NULL, NULL, ?, ?, ?, ?, 'escrowed', ?, ?, ?, ?, ?)
             """,
             (
                 order_id,

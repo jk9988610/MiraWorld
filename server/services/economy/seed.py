@@ -1,3 +1,4 @@
+"""Load static JSON config and seed economy tables."""
 from __future__ import annotations
 
 import json
@@ -25,12 +26,13 @@ def seed_economy(conn: sqlite3.Connection) -> None:
 
     for inst in inst_cfg.get("institutions", []):
         seed_cap = int(inst.get("seed_capital", 0))
+        lines_json = json.dumps(inst.get("production_lines") or [], ensure_ascii=False)
         conn.execute(
             """
             INSERT INTO institutions (
                 id, city, kind, display_name, owner_kind, owner_id, offer_id,
-                wallet_credits, open, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+                wallet_credits, open, production_lines_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """,
             (
                 inst["id"],
@@ -41,6 +43,7 @@ def seed_economy(conn: sqlite3.Connection) -> None:
                 inst["owner_id"],
                 inst.get("offer_id"),
                 seed_cap,
+                lines_json,
                 now,
             ),
         )

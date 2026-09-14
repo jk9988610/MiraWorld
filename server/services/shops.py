@@ -7,6 +7,8 @@ from fastapi import HTTPException
 
 from config_loader import items
 from db import db, utc_now
+from fastapi import HTTPException
+from services.capital.institution import ensure_player_shop_institution
 from schemas.shop import (
     MarketResponse,
     MarketShopPublic,
@@ -111,6 +113,17 @@ def apply_shop(player_id: int, display_name: str) -> ShopPublic:
             ))
             """,
             (player_id, display_name.strip(), now, player_id),
+        )
+        company = conn.execute(
+            "SELECT id FROM companies WHERE owner_player_id = ?",
+            (player_id,),
+        ).fetchone()
+        ensure_player_shop_institution(
+            conn,
+            player_id=player_id,
+            display_name=display_name.strip(),
+            city="潮灯市",
+            company_id=company["id"] if company else None,
         )
         row = conn.execute(
             "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",

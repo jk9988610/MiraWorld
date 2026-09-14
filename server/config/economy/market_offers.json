@@ -1,0 +1,24 @@
+{
+  "offers": [
+    {
+      "id": "offer_smart_terminal",
+      "institution_id": "inst_tech_device",
+      "seller": { "kind": "npc", "id": "npc_tech_device", "display": "科创设备厂" },
+      "place": { "city": "潮灯市" },
+      "gives": { "item_id": "item_smart_terminal", "qty": 1 },
+      "price_credits": 18,
+      "display": "智能终端",
+      "active": true
+    },
+    {
+      "id": "offer_med_imager",
+      "institution_id": "inst_tech_device",
+      "seller": { "kind": "npc", "id": "npc_tech_device", "display": "科创设备厂" },
+      "place": { "city": "潮灯市" },
+      "gives": { "item_id": "item_med_imager", "qty": 1 },
+      "price_credits": 45,
+      "display": "医学影像设备",
+      "active": true
+    }
+  ]
+}

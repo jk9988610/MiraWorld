@@ -1,0 +1,10 @@
+{
+  "facilities": [
+    { "resource_id": "power", "daily_output": 5000 },
+    { "resource_id": "connectivity", "daily_output": 3000 },
+    { "resource_id": "components", "daily_output": 4000 },
+    { "resource_id": "silicon_service", "daily_output": 800 },
+    { "resource_id": "facility", "daily_output": 2000 }
+  ],
+  "initial_inventory_ratio": 0.5
+}

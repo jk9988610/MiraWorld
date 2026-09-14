@@ -8,6 +8,7 @@ from config_loader import capitalist_economy
 from db import db, utc_now
 from fastapi import HTTPException
 from services.capital.assets import player_total_assets
+from services.capital.company import get_company_detail
 
 
 def _today() -> str:
@@ -30,13 +31,7 @@ def get_capital_status(player_id: int) -> dict:
     grant_date = _today()
     with db() as conn:
         assets = player_total_assets(conn, player_id)
-        company = conn.execute(
-            """
-            SELECT id, display_name, city, owner_player_id, created_at
-            FROM companies WHERE owner_player_id = ?
-            """,
-            (player_id,),
-        ).fetchone()
+        company = get_company_detail(conn, player_id)
         last = conn.execute(
             """
             SELECT grant_date, amount, asset_total, asset_pct, created_at
@@ -60,7 +55,7 @@ def get_capital_status(player_id: int) -> dict:
 
     return {
         "assets": assets,
-        "company": dict(company) if company else None,
+        "company": company,
         "has_shop": shop is not None,
         "last_grant": dict(last) if last else None,
         "can_claim_today": claimed_today is None,

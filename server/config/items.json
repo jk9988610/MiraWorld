@@ -26,8 +26,34 @@
     },
     {
       "id": "item_tidelamp_soy",
-      "display": "酱油",
+      "display": "潮灯酱油",
       "tags": ["material"]
+    },
+    {
+      "id": "item_smart_terminal",
+      "display": "智能终端",
+      "tags": ["device", "consumable", "tech"],
+      "on_acquire": {
+        "pop_group": {
+          "type": "SATISFY_PREF",
+          "satisfy_points": 8,
+          "pref_tags": ["device"]
+        }
+      },
+      "acquire_message": "组里又多了几台新终端。"
+    },
+    {
+      "id": "item_med_imager",
+      "display": "医学影像设备",
+      "tags": ["medical", "deploy", "tech"],
+      "on_acquire": {
+        "institution": {
+          "type": "DEPLOY_INST",
+          "required_kinds": ["clinic"],
+          "stack_limit": 2
+        }
+      },
+      "acquire_message": "影像设备上线，医馆可全负荷接诊。"
     }
   ]
 }

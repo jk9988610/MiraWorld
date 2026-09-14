@@ -1,0 +1,30 @@
+{
+  "recipes": [
+    {
+      "id": "recipe_smart_terminal_v1",
+      "display": "智能终端 V1",
+      "allowed_kinds": ["device_plant"],
+      "inputs": [
+        { "resource": "components", "qty": 3 },
+        { "resource": "power", "qty": 2 },
+        { "resource": "connectivity", "qty": 1 },
+        { "resource": "facility", "qty": 1 }
+      ],
+      "outputs": [{ "item_id": "item_smart_terminal", "qty": 1 }],
+      "daily_batches": 30
+    },
+    {
+      "id": "recipe_med_imager_v1",
+      "display": "医学影像设备 V1",
+      "allowed_kinds": ["device_plant"],
+      "inputs": [
+        { "resource": "components", "qty": 5 },
+        { "resource": "power", "qty": 3 },
+        { "resource": "silicon_service", "qty": 1 },
+        { "resource": "facility", "qty": 2 }
+      ],
+      "outputs": [{ "item_id": "item_med_imager", "qty": 1 }],
+      "daily_batches": 10
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "resources": [
+    { "id": "power", "display": "电力额度", "guide_price": 10 },
+    { "id": "connectivity", "display": "算力与网络", "guide_price": 15 },
+    { "id": "components", "display": "通用元器件包", "guide_price": 25 },
+    { "id": "silicon_service", "display": "流片与制程服务", "guide_price": 40 },
+    { "id": "facility", "display": "产业空间与运维", "guide_price": 8 }
+  ]
+}

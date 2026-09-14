@@ -1,0 +1,6 @@
+{
+  "price_floor_ratio": 0.7,
+  "price_ceiling_ratio": 1.5,
+  "scarcity_markup_per_ratio": 0.2,
+  "surplus_discount_per_ratio": 0.1
+}
