@@ -44,6 +44,7 @@ export default defineConfig({
           { text: '潮灯市', link: '/play/city' },
           { text: '城市经营', link: '/play/economy' },
           { text: '资本家', link: '/play/capital' },
+          { text: '生产 · 挂市场', link: '/play/production' },
           { text: '陈师傅', link: '/play/chen' },
           { text: '我的店', link: '/play/my-shop' },
           { text: '悬赏栏', link: '/play/bounties' },

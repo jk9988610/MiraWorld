@@ -29,8 +29,8 @@ def ensure_player_shop_institution(
             """
             INSERT INTO institutions (
                 id, city, kind, display_name, owner_kind, owner_id,
-                offer_id, wallet_credits, open, company_id, created_at
-            ) VALUES (?, ?, 'player_shop', ?, 'player', ?, NULL, 0, 1, ?, ?)
+                offer_id, wallet_credits, open, company_id, production_lines_json, created_at
+            ) VALUES (?, ?, 'player_shop', ?, 'player', ?, NULL, 0, 1, ?, '[]', ?)
             """,
             (
                 inst_id,

@@ -15,9 +15,14 @@ def active_offers(city: str | None = None, conn=None) -> list[dict]:
 
     offers_list = _active_npc_offers() + active_player_offers_catalog()
     if conn is not None:
+        from services.capital.production import active_institution_offers_catalog
         from services.economy.market_offers import institution_market_offers
 
-        offers_list = offers_list + institution_market_offers(conn, city)
+        offers_list = (
+            offers_list
+            + institution_market_offers(conn, city)
+            + active_institution_offers_catalog(conn, city)
+        )
     if city:
         offers_list = [o for o in offers_list if o.get("place", {}).get("city") == city]
     return offers_list

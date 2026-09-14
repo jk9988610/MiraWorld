@@ -233,6 +233,50 @@ export interface CapitalStatus {
   }
 }
 
+export interface ProductionStatus {
+  has_shop: boolean
+  has_company: boolean
+  company_wallet: number
+  shop_open: boolean
+  institution: {
+    id: string
+    display_name: string
+    kind: string
+    wallet_credits: number
+    production_ready: boolean
+  } | null
+  hub: {
+    city: string
+    resources: Array<{
+      resource_id: string
+      display: string
+      qty: number
+      price_credits: number
+      guide_price: number
+    }>
+  } | null
+  inventory: Array<{ item_id: string; display: string; qty: number }>
+  production_lines: Array<{ recipe_id: string; enabled: boolean }>
+  available_recipes: Array<{
+    id: string
+    display: string
+    inputs: Array<{ resource: string; qty: number }>
+    outputs: Array<{ item_id: string; qty: number }>
+    daily_batches: number
+  }>
+  offers: Array<{
+    id: string
+    item_id: string
+    item_display: string
+    qty: number
+    price_credits: number
+    display: string
+    active: boolean
+    stock: number
+    created_at: string
+  }>
+}
+
 export interface VisitResult {
   first_visit: boolean
   city: string
@@ -568,6 +612,62 @@ export function useGame() {
     return parseJson<{ ok: boolean; wallet_credits: number; company_wallet: number }>(res)
   }
 
+  async function loadProductionStatus() {
+    const res = await fetch(`${API_BASE}/capital/production`, { credentials: 'include' })
+    return parseJson<ProductionStatus>(res)
+  }
+
+  async function setupProduction() {
+    const res = await fetch(`${API_BASE}/capital/production/setup`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<ProductionStatus>(res)
+  }
+
+  async function updateProductionLines(lines: Array<{ recipe_id: string; enabled: boolean }>) {
+    const res = await fetch(`${API_BASE}/capital/production/lines`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lines }),
+    })
+    return parseJson<ProductionStatus>(res)
+  }
+
+  async function transferToInstitution(source: 'company' | 'player', amount: number) {
+    const res = await fetch(`${API_BASE}/capital/production/institution-transfer`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, amount }),
+    })
+    return parseJson<{ ok: boolean; institution_wallet: number; company_wallet: number }>(res)
+  }
+
+  async function createProductionOffer(body: {
+    item_id: string
+    display: string
+    price_credits: number
+    qty?: number
+  }) {
+    const res = await fetch(`${API_BASE}/capital/production/offers`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    return parseJson<ProductionStatus['offers'][0]>(res)
+  }
+
+  async function toggleProductionOffer(offerId: string, active: boolean) {
+    const res = await fetch(
+      `${API_BASE}/capital/production/offers/${encodeURIComponent(offerId)}?active=${active ? 'true' : 'false'}`,
+      { method: 'PATCH', credentials: 'include' },
+    )
+    return parseJson<ProductionStatus['offers'][0]>(res)
+  }
+
   return {
     world,
     loadWorld,
@@ -607,5 +707,11 @@ export function useGame() {
     claimDailyInvestment,
     createCompany,
     transferCompanyFunds,
+    loadProductionStatus,
+    setupProduction,
+    updateProductionLines,
+    transferToInstitution,
+    createProductionOffer,
+    toggleProductionOffer,
   }
 }
