@@ -293,6 +293,50 @@ export interface StackActionResult {
   stacks: StackData[]
 }
 
+export interface WorldSave {
+  id: string
+  scope: string
+  display_name: string
+  ironman: boolean
+  world_day: number
+  speed: string
+  last_played_at: string
+  created_at: string
+}
+
+export interface WorldGateStatus {
+  can_continue_solo: boolean
+  can_load_solo: boolean
+  can_new_solo: boolean
+  can_continue_multi: boolean
+  can_load_multi: boolean
+  can_new_multi: boolean
+  last_solo_save_id: string | null
+  last_multi_save_id: string | null
+  solo_saves: WorldSave[]
+  multi_saves: WorldSave[]
+  active_session: WorldSave | null
+}
+
+export interface WorldSession {
+  active: boolean
+  save: WorldSave | null
+}
+
+export interface WorldClock {
+  scope: string | null
+  world_day: number
+  speed_label: string
+  next_tick_hint: string | null
+}
+
+export interface PlayerFocus {
+  focus: string
+  source: string
+  in_work_window: boolean
+  override_until: string | null
+}
+
 const world = ref<WorldData | null>(null)
 
 async function parseJson<T>(res: Response): Promise<T> {
@@ -668,6 +712,92 @@ export function useGame() {
     return parseJson<ProductionStatus['offers'][0]>(res)
   }
 
+  async function toggleProductionOffer(offerId: string, active: boolean) {
+    const res = await fetch(
+      `${API_BASE}/capital/production/offers/${encodeURIComponent(offerId)}?active=${active ? 'true' : 'false'}`,
+      { method: 'PATCH', credentials: 'include' },
+    )
+    return parseJson<ProductionStatus['offers'][0]>(res)
+  }
+
+  async function loadWorldGate() {
+    const res = await fetch(`${API_BASE}/world/gate`, { credentials: 'include' })
+    return parseJson<WorldGateStatus>(res)
+  }
+
+  async function loadWorldSession() {
+    const res = await fetch(`${API_BASE}/world/session`, { credentials: 'include' })
+    return parseJson<WorldSession>(res)
+  }
+
+  async function worldNew(scope: 'solo' | 'multi', displayName = '', ironman = false) {
+    const res = await fetch(`${API_BASE}/world/new`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope, display_name: displayName, ironman }),
+    })
+    return parseJson<WorldSession>(res)
+  }
+
+  async function worldContinue(scope: 'solo' | 'multi') {
+    const res = await fetch(`${API_BASE}/world/continue`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope }),
+    })
+    return parseJson<WorldSession>(res)
+  }
+
+  async function worldLoad(scope: 'solo' | 'multi', saveId: string) {
+    const res = await fetch(`${API_BASE}/world/load`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope, save_id: saveId }),
+    })
+    return parseJson<WorldSession>(res)
+  }
+
+  async function worldAutosave() {
+    const res = await fetch(`${API_BASE}/world/autosave`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<{ ok: boolean }>(res)
+  }
+
+  async function loadWorldClock() {
+    const res = await fetch(`${API_BASE}/world/clock`, { credentials: 'include' })
+    return parseJson<WorldClock>(res)
+  }
+
+  async function setWorldSpeed(speed: string) {
+    const res = await fetch(`${API_BASE}/world/speed`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ speed }),
+    })
+    return parseJson<WorldClock>(res)
+  }
+
+  async function loadFocus() {
+    const res = await fetch(`${API_BASE}/me/focus`, { credentials: 'include' })
+    return parseJson<PlayerFocus>(res)
+  }
+
+  async function overrideFocus(focus: 'company' | 'personal') {
+    const res = await fetch(`${API_BASE}/me/focus/override`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ focus }),
+    })
+    return parseJson<PlayerFocus>(res)
+  }
+
   return {
     world,
     loadWorld,
@@ -713,5 +843,15 @@ export function useGame() {
     transferToInstitution,
     createProductionOffer,
     toggleProductionOffer,
+    loadWorldGate,
+    loadWorldSession,
+    worldNew,
+    worldContinue,
+    worldLoad,
+    worldAutosave,
+    loadWorldClock,
+    setWorldSpeed,
+    loadFocus,
+    overrideFocus,
   }
 }

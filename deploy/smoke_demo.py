@@ -82,6 +82,85 @@ def run_v20_once(base: str, run_index: int) -> None:
     )
 
 
+def enter_multi_world(base: str, opener, display_name: str = "") -> dict:
+    body = {"scope": "multi", "display_name": display_name, "ironman": True}
+    return api(base, opener, "POST", "/world/new", body)
+
+
+def run_v24_gate_once(base: str, run_index: int) -> None:
+    jar = CookieJar()
+    opener = build_opener(HTTPCookieProcessor(jar))
+    handle = f"门{run_index:02d}{uuid.uuid4().hex[:4]}"
+
+    api(base, opener, "POST", "/auth/register", {"handle": handle, "password": PASSWORD})
+
+    gate = api(base, opener, "GET", "/world/gate")
+    if gate.get("can_continue_multi") or gate.get("can_load_multi"):
+        raise DemoError(f"new account should have no multi save: {gate}")
+    if gate.get("can_continue_solo") or gate.get("can_load_solo"):
+        raise DemoError(f"new account should have no solo save: {gate}")
+    if not gate.get("can_new_multi"):
+        raise DemoError(f"can_new_multi should be true: {gate}")
+
+    sess = api(base, opener, "GET", "/world/session")
+    if sess.get("active"):
+        raise DemoError(f"expected no session before enter: {sess}")
+
+    created = api(
+        base,
+        opener,
+        "POST",
+        "/world/new",
+        {"scope": "multi", "display_name": f"门{run_index}多人", "ironman": True},
+    )
+    if not created.get("active") or not created.get("save", {}).get("ironman"):
+        raise DemoError(f"multi new failed: {created}")
+
+    gate2 = api(base, opener, "GET", "/world/gate")
+    if not gate2.get("can_continue_multi") or not gate2.get("can_load_multi"):
+        raise DemoError(f"after new multi, continue/load should unlock: {gate2}")
+    if gate2.get("can_new_multi"):
+        raise DemoError(f"can_new_multi should be false after one multi save: {gate2}")
+
+    focus = api(base, opener, "GET", "/me/focus")
+    if focus.get("focus") not in {"company", "personal"}:
+        raise DemoError(f"focus invalid: {focus}")
+
+    clock = api(base, opener, "GET", "/world/clock")
+    if clock.get("scope") != "multi":
+        raise DemoError(f"clock scope wrong: {clock}")
+
+    continued = api(base, opener, "POST", "/world/continue", {"scope": "multi"})
+    if not continued.get("active"):
+        raise DemoError(f"continue multi failed: {continued}")
+
+    save_id = created["save"]["id"]
+    loaded = api(
+        base,
+        opener,
+        "POST",
+        "/world/load",
+        {"scope": "multi", "save_id": save_id},
+    )
+    if not loaded.get("active"):
+        raise DemoError(f"load multi failed: {loaded}")
+
+    autosave = api(base, opener, "POST", "/world/autosave", None)
+    if not autosave.get("ok"):
+        raise DemoError(f"autosave failed: {autosave}")
+
+    manual = None
+    try:
+        manual = api(base, opener, "POST", "/world/save", None)
+    except DemoError as exc:
+        if "403" not in str(exc):
+            raise
+    if manual is not None:
+        raise DemoError("ironman manual save should be rejected")
+
+    print(f"  v2.4-gate run {run_index}: OK handle={handle} save={save_id}", flush=True)
+
+
 def run_v23_production_once(base: str, run_index: int) -> None:
     jar = CookieJar()
     opener = build_opener(HTTPCookieProcessor(jar))
@@ -89,6 +168,7 @@ def run_v23_production_once(base: str, run_index: int) -> None:
     tick_secret = os.environ.get("MIRAWORLD_TICK_SECRET", "dev-tick-secret")
 
     api(base, opener, "POST", "/auth/register", {"handle": handle, "password": PASSWORD})
+    enter_multi_world(base, opener, f"产{run_index}多人")
     api(base, opener, "POST", "/shop/apply", {"display_name": f"产{run_index}设备"})
     api(base, opener, "POST", "/capital/company", {"display_name": f"产{run_index}号科技"})
 
@@ -665,6 +745,11 @@ def main() -> int:
         help="Number of full demo passes (default: 5)",
     )
     parser.add_argument(
+        "--v24-gate",
+        action="store_true",
+        help="Run v2.4 gate + ironman + focus demo",
+    )
+    parser.add_argument(
         "--v22-prod",
         action="store_true",
         help="Run v2.2 player production + market offer demo",
@@ -716,7 +801,10 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    if args.v22_prod:
+    if args.v24_gate:
+        label = "v2.4 gate"
+        runner = run_v24_gate_once
+    elif args.v22_prod:
         label = "v2.2 player production"
         runner = run_v23_production_once
     elif args.v22:

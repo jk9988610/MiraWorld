@@ -23,7 +23,7 @@ async function onSubmit() {
     } else {
       await login(handle.value, password.value)
     }
-    window.location.href = '/miraworld/play/city.html'
+    window.location.href = '/miraworld/play/gate.html'
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败'
   } finally {

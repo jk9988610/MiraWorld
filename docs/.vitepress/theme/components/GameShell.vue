@@ -1,13 +1,28 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vitepress'
 import { useShellPolling, shellUnreadCount } from '../composables/useShellState'
+import { useGame } from '../composables/useGame'
 
 const route = useRoute()
+const { loadWorldSession } = useGame()
 useShellPolling()
 
 const show = computed(() => route.path.startsWith('/play/'))
 const path = computed(() => route.path)
+const isGate = computed(() => path.value.includes('/play/gate'))
+
+onMounted(async () => {
+  if (!show.value || isGate.value) return
+  try {
+    const sess = await loadWorldSession()
+    if (!sess.active) {
+      window.location.href = '/miraworld/play/gate.html'
+    }
+  } catch {
+    window.location.href = '/miraworld/auth/login.html'
+  }
+})
 
 const unreadBadge = computed(() => {
   const n = shellUnreadCount.value

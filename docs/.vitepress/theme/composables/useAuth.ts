@@ -89,6 +89,10 @@ export function useAuth() {
   async function logout() {
     loading.value = true
     try {
+      await fetch(`${API_BASE}/world/autosave`, {
+        method: 'POST',
+        credentials: 'include',
+      }).catch(() => {})
       await fetch(`${API_BASE}/auth/logout`, {
         method: 'POST',
         credentials: 'include',

@@ -275,6 +275,60 @@ def init_db() -> None:
         _seed_economy_if_empty(conn)
         _migrate_v22_institutions(conn)
         _migrate_v23_player_production(conn)
+        _migrate_v24_world_gate(conn)
+
+
+def _migrate_v24_world_gate(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS world_saves (
+            id TEXT PRIMARY KEY,
+            player_id INTEGER NOT NULL,
+            scope TEXT NOT NULL,
+            display_name TEXT NOT NULL,
+            ironman INTEGER NOT NULL DEFAULT 1,
+            world_id TEXT NOT NULL,
+            world_day INTEGER NOT NULL DEFAULT 1,
+            speed TEXT NOT NULL DEFAULT 'mid',
+            active INTEGER NOT NULL DEFAULT 0,
+            last_played_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            snapshot_json TEXT NOT NULL DEFAULT '{}',
+            FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS player_sessions (
+            player_id INTEGER PRIMARY KEY,
+            active_save_id TEXT NOT NULL,
+            entered_at TEXT NOT NULL,
+            FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (active_save_id) REFERENCES world_saves(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS player_schedules (
+            player_id INTEGER PRIMARY KEY,
+            timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
+            work_windows_json TEXT NOT NULL DEFAULT '[]',
+            holidays_json TEXT NOT NULL DEFAULT '[]',
+            focus_override TEXT,
+            focus_override_until TEXT,
+            notify_sound INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_world_saves_player_scope
+        ON world_saves (player_id, scope, last_played_at DESC)
+        """
+    )
 
 
 def _migrate_orders_v20(conn: sqlite3.Connection) -> None:

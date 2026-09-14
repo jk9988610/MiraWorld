@@ -155,6 +155,13 @@ def set_shop_open(player_id: int, open_: bool) -> ShopPublic:
 
 
 def set_shop_auto(player_id: int, auto_on: bool) -> ShopPublic:
+    from services.world_session.schedule import in_work_window
+
+    if auto_on and not in_work_window(player_id):
+        raise HTTPException(
+            status_code=400,
+            detail="下班时段不能开启自动当班，请等到上班窗口",
+        )
     with db() as conn:
         row = conn.execute(
             "SELECT player_id, display_name, city, open, auto_on, created_at FROM shops WHERE player_id = ?",
@@ -288,6 +295,9 @@ def player_offer_as_catalog(row: sqlite3.Row) -> dict:
 
 
 def get_my_shop_payload(player_id: int) -> ShopMeResponse:
+    from services.world_session.schedule import enforce_auto_off_if_off_hours
+
+    enforce_auto_off_if_off_hours(player_id)
     shop = get_shop(player_id)
     offers = list_my_offers(player_id)
     return ShopMeResponse(
