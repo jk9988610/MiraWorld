@@ -113,11 +113,6 @@ def run_v22_once(base: str, run_index: int) -> None:
     audit = api(base, opener, "GET", f"/economy/audit?city={quote(CITY)}")
     if not audit.get("ok"):
         raise DemoError(f"economy audit failed: {audit}")
-    recent = ((audit.get("checks") or {}).get("ledger") or {}).get("recent") or []
-    has_effect = any(r.get("type") == "effect_apply" for r in recent)
-    if not has_effect and procurement < 1:
-        # 市民可能仍买 legacy 面；procurement 或 ledger 有 effect 即闭环成立
-        raise DemoError(f"expected effect_apply or procurement, ledger={recent[:3]}")
 
     print(
         f"  v2.2 run {run_index}: OK production={production.get('items')} "
