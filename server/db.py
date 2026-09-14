@@ -272,6 +272,7 @@ def init_db() -> None:
         _create_v21_capital_tables(conn)
         _migrate_v21_p2_company(conn)
         _migrate_v22_schema(conn)
+        _migrate_v25_solo_world(conn)
         _seed_economy_if_empty(conn)
         _migrate_v22_institutions(conn)
         _migrate_v23_player_production(conn)
@@ -586,8 +587,6 @@ def _migrate_v21_p2_company(conn: sqlite3.Connection) -> None:
 
 
 def _migrate_v22_schema(conn: sqlite3.Connection) -> None:
-    from services.l0.hub import ensure_hub_city
-
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS hub_inventory (
@@ -650,9 +649,6 @@ def _migrate_v22_schema(conn: sqlite3.Connection) -> None:
     if order_cols and "buyer_institution_id" not in order_cols:
         conn.execute("ALTER TABLE orders ADD COLUMN buyer_institution_id TEXT")
 
-    ensure_hub_city(conn, "潮灯市")
-
-
 def _migrate_v22_institutions(conn: sqlite3.Connection) -> None:
     import json
 
@@ -686,12 +682,13 @@ def _migrate_v22_institutions(conn: sqlite3.Connection) -> None:
         conn.execute(
             """
             INSERT INTO institutions (
-                id, city, kind, display_name, owner_kind, owner_id, offer_id,
+                id, world_id, city, kind, display_name, owner_kind, owner_id, offer_id,
                 wallet_credits, open, production_lines_json, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """,
             (
                 inst["id"],
+                "chaodeng_multi",
                 inst.get("city", city),
                 inst["kind"],
                 inst["display_name"],
@@ -759,6 +756,135 @@ def _seed_economy_if_empty(conn: sqlite3.Connection) -> None:
     from services.economy.seed import seed_economy
 
     seed_economy(conn)
+
+
+def _migrate_v25_solo_world(conn: sqlite3.Connection) -> None:
+    from services.l0.hub import ensure_hub_city
+    from services.world_session.constants import DEFAULT_CITY, SHARED_WORLD_ID
+
+    _ensure_app_meta(conn)
+    if _meta_done(conn, "v25_solo_world"):
+        return
+
+    inst_cols = _columns(conn, "institutions")
+    if inst_cols and "world_id" not in inst_cols:
+        conn.execute(
+            f"ALTER TABLE institutions ADD COLUMN world_id TEXT NOT NULL DEFAULT '{SHARED_WORLD_ID}'"
+        )
+
+    pop_cols = _columns(conn, "pop_groups")
+    if pop_cols and "world_id" not in pop_cols:
+        conn.execute(
+            f"ALTER TABLE pop_groups ADD COLUMN world_id TEXT NOT NULL DEFAULT '{SHARED_WORLD_ID}'"
+        )
+
+    wf_cols = _columns(conn, "city_welfare_fund")
+    if wf_cols and "world_id" not in wf_cols:
+        conn.execute(
+            """
+            CREATE TABLE city_welfare_fund_v25 (
+                world_id TEXT NOT NULL,
+                city TEXT NOT NULL,
+                balance INTEGER NOT NULL DEFAULT 0,
+                last_grant_date TEXT,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (world_id, city)
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO city_welfare_fund_v25 (
+                world_id, city, balance, last_grant_date, updated_at
+            )
+            SELECT ?, city, balance, last_grant_date, updated_at FROM city_welfare_fund
+            """,
+            (SHARED_WORLD_ID,),
+        )
+        conn.execute("DROP TABLE city_welfare_fund")
+        conn.execute("ALTER TABLE city_welfare_fund_v25 RENAME TO city_welfare_fund")
+
+    tick_cols = _columns(conn, "economy_ticks")
+    if tick_cols and "world_id" not in tick_cols:
+        conn.execute(
+            """
+            CREATE TABLE economy_ticks_v25 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                city TEXT NOT NULL,
+                world_id TEXT NOT NULL,
+                tick_date TEXT NOT NULL,
+                status TEXT NOT NULL,
+                summary_json TEXT NOT NULL DEFAULT '{}',
+                created_at TEXT NOT NULL,
+                UNIQUE (city, world_id, tick_date)
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO economy_ticks_v25 (
+                city, world_id, tick_date, status, summary_json, created_at
+            )
+            SELECT city, ?, tick_date, status, summary_json, created_at FROM economy_ticks
+            """,
+            (SHARED_WORLD_ID,),
+        )
+        conn.execute("DROP TABLE economy_ticks")
+        conn.execute("ALTER TABLE economy_ticks_v25 RENAME TO economy_ticks")
+
+    hub_inv_cols = _columns(conn, "hub_inventory")
+    if hub_inv_cols and "world_id" not in hub_inv_cols:
+        conn.execute(
+            """
+            CREATE TABLE hub_inventory_v25 (
+                world_id TEXT NOT NULL,
+                city TEXT NOT NULL,
+                resource_id TEXT NOT NULL,
+                qty INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (world_id, city, resource_id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO hub_inventory_v25 (world_id, city, resource_id, qty, updated_at)
+            SELECT ?, city, resource_id, qty, updated_at FROM hub_inventory
+            """,
+            (SHARED_WORLD_ID,),
+        )
+        conn.execute("DROP TABLE hub_inventory")
+        conn.execute("ALTER TABLE hub_inventory_v25 RENAME TO hub_inventory")
+
+    hub_price_cols = _columns(conn, "hub_prices")
+    if hub_price_cols and "world_id" not in hub_price_cols:
+        conn.execute(
+            """
+            CREATE TABLE hub_prices_v25 (
+                world_id TEXT NOT NULL,
+                city TEXT NOT NULL,
+                resource_id TEXT NOT NULL,
+                price_credits INTEGER NOT NULL,
+                guide_price INTEGER NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (world_id, city, resource_id)
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO hub_prices_v25 (
+                world_id, city, resource_id, price_credits, guide_price, updated_at
+            )
+            SELECT ?, city, resource_id, price_credits, guide_price, updated_at FROM hub_prices
+            """,
+            (SHARED_WORLD_ID,),
+        )
+        conn.execute("DROP TABLE hub_prices")
+        conn.execute("ALTER TABLE hub_prices_v25 RENAME TO hub_prices")
+
+    ensure_hub_city(conn, DEFAULT_CITY, SHARED_WORLD_ID)
+    _meta_set(conn, "v25_solo_world")
 
 
 def utc_now() -> str:

@@ -88,3 +88,21 @@ class FocusResponse(BaseModel):
 
 class FocusOverrideBody(BaseModel):
     focus: str = Field(pattern="^(company|personal)$")
+
+
+class SoloWorldStatusResponse(BaseModel):
+    world_id: str
+    world_day: int
+    speed: str
+    display_name: str
+    ironman: bool
+    pop_groups: int
+    institutions: int
+
+
+class SoloTickResponse(BaseModel):
+    ok: bool
+    world_day: int
+    pop_groups: int
+    institutions: int
+    tick: dict | None = None

@@ -330,6 +330,24 @@ export interface WorldClock {
   next_tick_hint: string | null
 }
 
+export interface SoloWorldStatus {
+  world_id: string
+  world_day: number
+  speed: string
+  display_name: string
+  ironman: boolean
+  pop_groups: number
+  institutions: number
+}
+
+export interface SoloTickResult {
+  ok: boolean
+  world_day: number
+  pop_groups: number
+  institutions: number
+  tick?: Record<string, unknown>
+}
+
 export interface PlayerFocus {
   focus: string
   source: string
@@ -712,14 +730,6 @@ export function useGame() {
     return parseJson<ProductionStatus['offers'][0]>(res)
   }
 
-  async function toggleProductionOffer(offerId: string, active: boolean) {
-    const res = await fetch(
-      `${API_BASE}/capital/production/offers/${encodeURIComponent(offerId)}?active=${active ? 'true' : 'false'}`,
-      { method: 'PATCH', credentials: 'include' },
-    )
-    return parseJson<ProductionStatus['offers'][0]>(res)
-  }
-
   async function loadWorldGate() {
     const res = await fetch(`${API_BASE}/world/gate`, { credentials: 'include' })
     return parseJson<WorldGateStatus>(res)
@@ -781,6 +791,19 @@ export function useGame() {
       body: JSON.stringify({ speed }),
     })
     return parseJson<WorldClock>(res)
+  }
+
+  async function loadSoloStatus() {
+    const res = await fetch(`${API_BASE}/world/solo/status`, { credentials: 'include' })
+    return parseJson<SoloWorldStatus>(res)
+  }
+
+  async function advanceSoloTick() {
+    const res = await fetch(`${API_BASE}/world/tick`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<SoloTickResult>(res)
   }
 
   async function loadFocus() {
@@ -851,6 +874,8 @@ export function useGame() {
     worldAutosave,
     loadWorldClock,
     setWorldSpeed,
+    loadSoloStatus,
+    advanceSoloTick,
     loadFocus,
     overrideFocus,
   }
