@@ -18,6 +18,7 @@ from services.economy.market_orders import place_market_order
 from services.economy.procurement import run_institution_procurement
 from services.economy.production import run_institution_production
 from services.l0.hub import get_hub_status, run_l0_tick
+from services.world_session.constants import SHARED_WORLD_ID
 
 
 def _today() -> str:
@@ -54,7 +55,7 @@ def _affordable_offers(conn: sqlite3.Connection, city: str, wallet: int) -> list
     return offers
 
 
-def _run_payroll(conn: sqlite3.Connection, city: str) -> dict:
+def _run_payroll(conn: sqlite3.Connection, city: str, world_id: str) -> dict:
     floor = min_wage()
     paid_groups = 0
     total_paid = 0
@@ -63,9 +64,9 @@ def _run_payroll(conn: sqlite3.Connection, city: str) -> dict:
         """
         SELECT id, headcount, primary_institution_id, job_type
         FROM pop_groups
-        WHERE city = ? AND primary_institution_id IS NOT NULL
+        WHERE city = ? AND world_id = ? AND primary_institution_id IS NOT NULL
         """,
-        (city,),
+        (city, world_id),
     ).fetchall()
     for group in groups:
         inst_id = group["primary_institution_id"]
@@ -126,24 +127,30 @@ def _run_payroll(conn: sqlite3.Connection, city: str) -> dict:
     return {"paid_groups": paid_groups, "total_paid": total_paid, "underpaid": underpaid}
 
 
-def _run_welfare(conn: sqlite3.Connection, city: str, tick_date: str) -> dict:
+def _run_welfare(conn: sqlite3.Connection, city: str, tick_date: str, world_id: str) -> dict:
     grant_amount = welfare_grant()
     fund = conn.execute(
-        "SELECT balance, last_grant_date FROM city_welfare_fund WHERE city = ?",
-        (city,),
+        """
+        SELECT balance, last_grant_date FROM city_welfare_fund
+        WHERE world_id = ? AND city = ?
+        """,
+        (world_id, city),
     ).fetchone()
     if fund is None:
         now = utc_now()
         conn.execute(
             """
-            INSERT INTO city_welfare_fund (city, balance, last_grant_date, updated_at)
-            VALUES (?, 0, NULL, ?)
+            INSERT INTO city_welfare_fund (world_id, city, balance, last_grant_date, updated_at)
+            VALUES (?, ?, 0, NULL, ?)
             """,
-            (city, now),
+            (world_id, city, now),
         )
         fund = conn.execute(
-            "SELECT balance, last_grant_date FROM city_welfare_fund WHERE city = ?",
-            (city,),
+            """
+            SELECT balance, last_grant_date FROM city_welfare_fund
+            WHERE world_id = ? AND city = ?
+            """,
+            (world_id, city),
         ).fetchone()
 
     granted = 0
@@ -153,9 +160,9 @@ def _run_welfare(conn: sqlite3.Connection, city: str, tick_date: str) -> dict:
             """
             UPDATE city_welfare_fund
             SET balance = balance + ?, last_grant_date = ?, updated_at = ?
-            WHERE city = ?
+            WHERE world_id = ? AND city = ?
             """,
-            (grant_amount, tick_date, now, city),
+            (grant_amount, tick_date, now, world_id, city),
         )
         add_economy_ledger(
             conn,
@@ -174,22 +181,27 @@ def _run_welfare(conn: sqlite3.Connection, city: str, tick_date: str) -> dict:
     groups = conn.execute(
         """
         SELECT id, headcount FROM pop_groups
-        WHERE city = ? AND primary_institution_id IS NULL
+        WHERE city = ? AND world_id = ? AND primary_institution_id IS NULL
         """,
-        (city,),
+        (city, world_id),
     ).fetchall()
     for group in groups:
         owed = subsidy_rate * int(group["headcount"])
         fund_row = conn.execute(
-            "SELECT balance FROM city_welfare_fund WHERE city = ?",
-            (city,),
+            """
+            SELECT balance FROM city_welfare_fund WHERE world_id = ? AND city = ?
+            """,
+            (world_id, city),
         ).fetchone()
         if fund_row is None or int(fund_row["balance"]) < owed:
             continue
         now = utc_now()
         conn.execute(
-            "UPDATE city_welfare_fund SET balance = balance - ?, updated_at = ? WHERE city = ?",
-            (owed, now, city),
+            """
+            UPDATE city_welfare_fund SET balance = balance - ?, updated_at = ?
+            WHERE world_id = ? AND city = ?
+            """,
+            (owed, now, world_id, city),
         )
         conn.execute(
             "UPDATE pop_groups SET wallet_credits = wallet_credits + ?, updated_at = ? WHERE id = ?",
@@ -217,8 +229,10 @@ def _run_welfare(conn: sqlite3.Connection, city: str, tick_date: str) -> dict:
         total_subsidy += owed
 
     fund_balance = conn.execute(
-        "SELECT balance FROM city_welfare_fund WHERE city = ?",
-        (city,),
+        """
+        SELECT balance FROM city_welfare_fund WHERE world_id = ? AND city = ?
+        """,
+        (world_id, city),
     ).fetchone()
     return {
         "granted": granted,
@@ -228,17 +242,22 @@ def _run_welfare(conn: sqlite3.Connection, city: str, tick_date: str) -> dict:
     }
 
 
-def _run_purchases(conn: sqlite3.Connection, city: str, rng: random.Random) -> dict:
+def _run_purchases(
+    conn: sqlite3.Connection,
+    city: str,
+    world_id: str,
+    rng: random.Random,
+) -> dict:
     tag_map = _item_tag_map()
     max_n = max_purchases_per_group()
     orders: list[dict] = []
     groups = conn.execute(
         """
         SELECT id, wallet_credits, pref_json FROM pop_groups
-        WHERE city = ? AND wallet_credits > 0
+        WHERE city = ? AND world_id = ? AND wallet_credits > 0
         ORDER BY wallet_credits DESC
         """,
-        (city,),
+        (city, world_id),
     ).fetchall()
     for group in groups:
         wallet = int(group["wallet_credits"])
@@ -265,29 +284,39 @@ def _run_purchases(conn: sqlite3.Connection, city: str, rng: random.Random) -> d
     return {"orders": len(orders), "details": orders[:20]}
 
 
-def run_daily_tick(city: str = "潮灯市", *, force: bool = False) -> dict:
-    tick_date = _today()
-    rng = random.Random(f"{city}:{tick_date}")
+def run_daily_tick(
+    city: str = "潮灯市",
+    *,
+    world_id: str = SHARED_WORLD_ID,
+    force: bool = False,
+    tick_date: str | None = None,
+) -> dict:
+    tick_date = tick_date or _today()
+    rng = random.Random(f"{world_id}:{city}:{tick_date}")
 
     with db() as conn:
         existing = conn.execute(
-            "SELECT id FROM economy_ticks WHERE city = ? AND tick_date = ?",
-            (city, tick_date),
+            """
+            SELECT id FROM economy_ticks
+            WHERE city = ? AND world_id = ? AND tick_date = ?
+            """,
+            (city, world_id, tick_date),
         ).fetchone()
         if existing and not force:
             return {
                 "ok": False,
                 "reason": "already_ran",
                 "city": city,
+                "world_id": world_id,
                 "tick_date": tick_date,
             }
 
-        l0 = run_l0_tick(conn, city)
-        production = run_institution_production(conn, city)
-        payroll = _run_payroll(conn, city)
-        welfare = _run_welfare(conn, city, tick_date)
-        purchases = _run_purchases(conn, city, rng)
-        procurement = run_institution_procurement(conn, city, rng)
+        l0 = run_l0_tick(conn, city, world_id)
+        production = run_institution_production(conn, city, world_id)
+        payroll = _run_payroll(conn, city, world_id)
+        welfare = _run_welfare(conn, city, tick_date, world_id)
+        purchases = _run_purchases(conn, city, world_id, rng)
+        procurement = run_institution_procurement(conn, city, world_id, rng)
 
         summary = {
             "l0": l0,
@@ -303,64 +332,71 @@ def run_daily_tick(city: str = "潮灯市", *, force: bool = False) -> dict:
                 """
                 UPDATE economy_ticks
                 SET status = 'done', summary_json = ?, created_at = ?
-                WHERE city = ? AND tick_date = ?
+                WHERE city = ? AND world_id = ? AND tick_date = ?
                 """,
-                (json.dumps(summary, ensure_ascii=False), now, city, tick_date),
+                (json.dumps(summary, ensure_ascii=False), now, city, world_id, tick_date),
             )
         else:
             conn.execute(
                 """
-                INSERT INTO economy_ticks (city, tick_date, status, summary_json, created_at)
-                VALUES (?, ?, 'done', ?, ?)
+                INSERT INTO economy_ticks (
+                    city, world_id, tick_date, status, summary_json, created_at
+                ) VALUES (?, ?, ?, 'done', ?, ?)
                 """,
-                (city, tick_date, json.dumps(summary, ensure_ascii=False), now),
+                (city, world_id, tick_date, json.dumps(summary, ensure_ascii=False), now),
             )
 
     return {
         "ok": True,
         "city": city,
+        "world_id": world_id,
         "tick_date": tick_date,
         "summary": summary,
     }
 
 
-def get_economy_status(city: str = "潮灯市") -> dict:
+def get_economy_status(city: str = "潮灯市", world_id: str = SHARED_WORLD_ID) -> dict:
     with db() as conn:
         institutions = conn.execute(
             """
             SELECT id, display_name, kind, wallet_credits, open, offer_id
-            FROM institutions WHERE city = ?
+            FROM institutions WHERE city = ? AND world_id = ?
             ORDER BY id
             """,
-            (city,),
+            (city, world_id),
         ).fetchall()
         groups = conn.execute(
             """
             SELECT id, headcount, wallet_credits, primary_institution_id,
                    job_type, job_display, satisfaction
-            FROM pop_groups WHERE city = ?
+            FROM pop_groups WHERE city = ? AND world_id = ?
             ORDER BY id
             """,
-            (city,),
+            (city, world_id),
         ).fetchall()
         fund = conn.execute(
-            "SELECT balance, last_grant_date FROM city_welfare_fund WHERE city = ?",
-            (city,),
+            """
+            SELECT balance, last_grant_date FROM city_welfare_fund
+            WHERE world_id = ? AND city = ?
+            """,
+            (world_id, city),
         ).fetchone()
         last_tick = conn.execute(
             """
             SELECT tick_date, summary_json, created_at FROM economy_ticks
-            WHERE city = ? ORDER BY tick_date DESC LIMIT 1
+            WHERE city = ? AND world_id = ? ORDER BY tick_date DESC LIMIT 1
             """,
-            (city,),
+            (city, world_id),
         ).fetchone()
         pop_orders = conn.execute(
             """
-            SELECT COUNT(*) AS c FROM orders WHERE buyer_kind = 'pop_group' AND city = ?
+            SELECT COUNT(*) AS c FROM orders o
+            JOIN pop_groups pg ON pg.id = o.buyer_group_id
+            WHERE o.buyer_kind = 'pop_group' AND o.city = ? AND pg.world_id = ?
             """,
-            (city,),
+            (city, world_id),
         ).fetchone()
-        hub = get_hub_status(conn, city)
+        hub = get_hub_status(conn, city, world_id)
 
     employed_count = sum(1 for g in groups if g["primary_institution_id"])
     unemployed_count = len(groups) - employed_count

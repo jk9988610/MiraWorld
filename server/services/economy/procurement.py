@@ -6,6 +6,7 @@ import sqlite3
 
 from config_loader import items
 from services.economy.market_orders import place_market_order
+from services.world_session.constants import SHARED_WORLD_ID
 
 
 def _item_needs_institution_deploy(item_id: str, kind: str) -> bool:
@@ -47,18 +48,21 @@ def _institution_needed_items(kind: str) -> list[str]:
 def run_institution_procurement(
     conn: sqlite3.Connection,
     city: str,
-    rng: random.Random,
+    world_id: str = SHARED_WORLD_ID,
+    rng: random.Random | None = None,
 ) -> dict:
     from services.catalog import active_offers
 
+    if rng is None:
+        rng = random.Random()
     orders: list[dict] = []
     institutions = conn.execute(
         """
         SELECT id, kind, wallet_credits FROM institutions
-        WHERE city = ? AND owner_kind = 'system'
+        WHERE city = ? AND world_id = ? AND owner_kind = 'system'
         ORDER BY id
         """,
-        (city,),
+        (city, world_id),
     ).fetchall()
     offers = active_offers(city, conn=conn)
     for inst in institutions:

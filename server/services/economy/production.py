@@ -7,6 +7,7 @@ import sqlite3
 from config_loader import l1_recipes
 from services.economy.config import add_economy_ledger
 from services.l0.hub import purchase_hub_resources
+from services.world_session.constants import SHARED_WORLD_ID
 
 
 def _recipe_map() -> dict[str, dict]:
@@ -79,15 +80,19 @@ def consume_institution_inventory(
     return True
 
 
-def run_institution_production(conn: sqlite3.Connection, city: str) -> dict:
+def run_institution_production(
+    conn: sqlite3.Connection,
+    city: str,
+    world_id: str = SHARED_WORLD_ID,
+) -> dict:
     recipes = _recipe_map()
     institutions = conn.execute(
         """
         SELECT id, kind, production_lines_json FROM institutions
-        WHERE city = ? AND production_lines_json IS NOT NULL
+        WHERE city = ? AND world_id = ? AND production_lines_json IS NOT NULL
           AND production_lines_json != '[]'
         """,
-        (city,),
+        (city, world_id),
     ).fetchall()
     produced_batches = 0
     produced_items = 0
@@ -116,6 +121,7 @@ def run_institution_production(conn: sqlite3.Connection, city: str) -> dict:
                     city=city,
                     institution_id=inst["id"],
                     inputs=recipe.get("inputs", []),
+                    world_id=world_id,
                 )
                 if not ok:
                     skipped += 1

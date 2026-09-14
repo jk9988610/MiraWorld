@@ -6,10 +6,9 @@ import uuid
 
 from db import db, utc_now
 from fastapi import HTTPException
+from services.world_session.constants import DEFAULT_CITY, SHARED_WORLD_ID
 from services.world_session.schedule import ensure_schedule
-
-SHARED_WORLD_ID = "chaodeng_multi"
-DEFAULT_CITY = "潮灯市"
+from services.world_session.solo_world import seed_solo_world
 
 
 def _save_row(row: sqlite3.Row) -> dict:
@@ -46,9 +45,10 @@ def _last_save_id(saves: list[dict]) -> str | None:
 def _multi_world_day(conn: sqlite3.Connection) -> int:
     row = conn.execute(
         """
-        SELECT COUNT(*) AS c FROM economy_ticks WHERE city = ?
+        SELECT COUNT(*) AS c FROM economy_ticks
+        WHERE city = ? AND world_id = ?
         """,
-        (DEFAULT_CITY,),
+        (DEFAULT_CITY, SHARED_WORLD_ID),
     ).fetchone()
     count = int(row["c"]) if row else 0
     return max(1, count)
@@ -185,6 +185,8 @@ def create_new_save(
                 now,
             ),
         )
+        if scope == "solo":
+            seed_solo_world(conn, world_id)
         _activate(conn, player_id, save_id)
         row = conn.execute(
             """
@@ -316,9 +318,9 @@ def get_clock(player_id: int) -> dict:
         last = conn.execute(
             """
             SELECT tick_date, created_at FROM economy_ticks
-            WHERE city = ? ORDER BY tick_date DESC LIMIT 1
+            WHERE city = ? AND world_id = ? ORDER BY tick_date DESC LIMIT 1
             """,
-            (DEFAULT_CITY,),
+            (DEFAULT_CITY, SHARED_WORLD_ID),
         ).fetchone()
     hint = f"最近 tick：{last['tick_date']}" if last else "等待首次城市 tick"
     return {

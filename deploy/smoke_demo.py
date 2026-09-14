@@ -161,6 +161,66 @@ def run_v24_gate_once(base: str, run_index: int) -> None:
     print(f"  v2.4-gate run {run_index}: OK handle={handle} save={save_id}", flush=True)
 
 
+def run_v24_solo_once(base: str, run_index: int) -> None:
+    jar = CookieJar()
+    opener = build_opener(HTTPCookieProcessor(jar))
+    handle = f"单{run_index:02d}{uuid.uuid4().hex[:4]}"
+
+    api(base, opener, "POST", "/auth/register", {"handle": handle, "password": PASSWORD})
+
+    shared_before = api(base, opener, "GET", "/economy/status")
+    shared_pop = shared_before.get("pop_groups", {}).get("count")
+
+    created = api(
+        base,
+        opener,
+        "POST",
+        "/world/new",
+        {"scope": "solo", "display_name": f"单{run_index}人", "ironman": False},
+    )
+    if not created.get("active") or created.get("save", {}).get("scope") != "solo":
+        raise DemoError(f"solo new failed: {created}")
+
+    status = api(base, opener, "GET", "/world/solo/status")
+    if status.get("pop_groups") != 10:
+        raise DemoError(f"expected 10 pop groups, got: {status}")
+    if status.get("world_day") != 1:
+        raise DemoError(f"expected world_day=1, got: {status}")
+
+    clock = api(base, opener, "GET", "/world/clock")
+    if clock.get("scope") != "solo" or clock.get("world_day") != 1:
+        raise DemoError(f"solo clock wrong: {clock}")
+
+    tick1 = api(base, opener, "POST", "/world/tick", None)
+    if not tick1.get("ok") or tick1.get("world_day") != 2:
+        raise DemoError(f"first solo tick failed: {tick1}")
+
+    tick2 = api(base, opener, "POST", "/world/tick", None)
+    if tick2.get("world_day") != 3:
+        raise DemoError(f"second solo tick failed: {tick2}")
+
+    api(base, opener, "PATCH", "/world/speed", {"speed": "pause"})
+    try:
+        api(base, opener, "POST", "/world/tick", None)
+        raise DemoError("tick should fail while paused")
+    except DemoError as exc:
+        if "400" not in str(exc):
+            raise
+
+    shared_after = api(base, opener, "GET", "/economy/status")
+    if shared_after.get("pop_groups", {}).get("count") != shared_pop:
+        raise DemoError(
+            f"shared world pop count changed: {shared_pop} -> "
+            f"{shared_after.get('pop_groups', {}).get('count')}"
+        )
+
+    print(
+        f"  v2.4-solo run {run_index}: OK handle={handle} "
+        f"world_id={status.get('world_id')} day=3 pop=10",
+        flush=True,
+    )
+
+
 def run_v23_production_once(base: str, run_index: int) -> None:
     jar = CookieJar()
     opener = build_opener(HTTPCookieProcessor(jar))
@@ -750,6 +810,11 @@ def main() -> int:
         help="Run v2.4 gate + ironman + focus demo",
     )
     parser.add_argument(
+        "--v24-solo",
+        action="store_true",
+        help="Run v2.4 P2 solo instance + tick demo (fast)",
+    )
+    parser.add_argument(
         "--v22-prod",
         action="store_true",
         help="Run v2.2 player production + market offer demo",
@@ -801,7 +866,10 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    if args.v24_gate:
+    if args.v24_solo:
+        label = "v2.4 solo"
+        runner = run_v24_solo_once
+    elif args.v24_gate:
         label = "v2.4 gate"
         runner = run_v24_gate_once
     elif args.v22_prod:

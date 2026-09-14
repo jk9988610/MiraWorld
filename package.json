@@ -21,6 +21,7 @@
     "smoke:hub": "python3 -u deploy/smoke_demo.py --v22",
     "smoke:production": "python3 -u deploy/smoke_demo.py --v22-prod",
     "smoke:gate": "python3 -u deploy/smoke_demo.py --v24-gate",
+    "smoke:solo": "python3 -u deploy/smoke_demo.py --v24-solo -n 1",
     "economy:cron": "python3 -u deploy/economy_tick_cron.py --install-cron",
     "purge:test-accounts": "python3 -u deploy/purge_test_accounts.py"
   },

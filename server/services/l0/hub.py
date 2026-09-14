@@ -5,13 +5,18 @@ import sqlite3
 
 from config_loader import l0_facilities, l0_hub_pricing, l0_resources
 from services.economy.config import add_economy_ledger
+from services.world_session.constants import SHARED_WORLD_ID
 
 
 def _resource_defs() -> dict[str, dict]:
     return {r["id"]: r for r in l0_resources().get("resources", [])}
 
 
-def ensure_hub_city(conn: sqlite3.Connection, city: str) -> None:
+def ensure_hub_city(
+    conn: sqlite3.Connection,
+    city: str,
+    world_id: str = SHARED_WORLD_ID,
+) -> None:
     defs = _resource_defs()
     fac = l0_facilities()
     ratio = float(fac.get("initial_inventory_ratio", 0.5))
@@ -19,9 +24,10 @@ def ensure_hub_city(conn: sqlite3.Connection, city: str) -> None:
         rid = resource["id"]
         row = conn.execute(
             """
-            SELECT qty FROM hub_inventory WHERE city = ? AND resource_id = ?
+            SELECT qty FROM hub_inventory
+            WHERE world_id = ? AND city = ? AND resource_id = ?
             """,
-            (city, rid),
+            (world_id, city, rid),
         ).fetchone()
         if row is not None:
             continue
@@ -33,10 +39,10 @@ def ensure_hub_city(conn: sqlite3.Connection, city: str) -> None:
         initial = max(int(daily * ratio), 100)
         conn.execute(
             """
-            INSERT INTO hub_inventory (city, resource_id, qty, updated_at)
-            VALUES (?, ?, ?, datetime('now'))
+            INSERT INTO hub_inventory (world_id, city, resource_id, qty, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'))
             """,
-            (city, rid, initial),
+            (world_id, city, rid, initial),
         )
 
 
@@ -62,8 +68,12 @@ def compute_price(guide: int, qty: int, daily_output: int) -> int:
     return max(int(guide * floor_r), min(int(guide * ceil_r), int(price)))
 
 
-def run_l0_tick(conn: sqlite3.Connection, city: str) -> dict:
-    ensure_hub_city(conn, city)
+def run_l0_tick(
+    conn: sqlite3.Connection,
+    city: str,
+    world_id: str = SHARED_WORLD_ID,
+) -> dict:
+    ensure_hub_city(conn, city, world_id)
     fac = l0_facilities()
     daily_map = {
         f["resource_id"]: int(f.get("daily_output", 0))
@@ -78,55 +88,67 @@ def run_l0_tick(conn: sqlite3.Connection, city: str) -> dict:
                 """
                 UPDATE hub_inventory
                 SET qty = qty + ?, updated_at = datetime('now')
-                WHERE city = ? AND resource_id = ?
+                WHERE world_id = ? AND city = ? AND resource_id = ?
                 """,
-                (daily, city, resource_id),
+                (daily, world_id, city, resource_id),
             )
             restocked += daily
         row = conn.execute(
             """
-            SELECT qty FROM hub_inventory WHERE city = ? AND resource_id = ?
+            SELECT qty FROM hub_inventory
+            WHERE world_id = ? AND city = ? AND resource_id = ?
             """,
-            (city, resource_id),
+            (world_id, city, resource_id),
         ).fetchone()
         qty = int(row["qty"]) if row else 0
         guide = _guide_price(resource_id)
         price = compute_price(guide, qty, daily)
         conn.execute(
             """
-            INSERT INTO hub_prices (city, resource_id, price_credits, guide_price, updated_at)
-            VALUES (?, ?, ?, ?, datetime('now'))
-            ON CONFLICT(city, resource_id) DO UPDATE SET
+            INSERT INTO hub_prices (
+                world_id, city, resource_id, price_credits, guide_price, updated_at
+            ) VALUES (?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(world_id, city, resource_id) DO UPDATE SET
                 price_credits = excluded.price_credits,
                 guide_price = excluded.guide_price,
                 updated_at = excluded.updated_at
             """,
-            (city, resource_id, price, guide),
+            (world_id, city, resource_id, price, guide),
         )
         priced += 1
     return {"restocked_units": restocked, "resources_priced": priced}
 
 
-def get_hub_prices(conn: sqlite3.Connection, city: str) -> dict[str, int]:
-    ensure_hub_city(conn, city)
+def get_hub_prices(
+    conn: sqlite3.Connection,
+    city: str,
+    world_id: str = SHARED_WORLD_ID,
+) -> dict[str, int]:
+    ensure_hub_city(conn, city, world_id)
     rows = conn.execute(
         """
-        SELECT resource_id, price_credits FROM hub_prices WHERE city = ?
+        SELECT resource_id, price_credits FROM hub_prices
+        WHERE world_id = ? AND city = ?
         """,
-        (city,),
+        (world_id, city),
     ).fetchall()
     return {row["resource_id"]: int(row["price_credits"]) for row in rows}
 
 
-def get_hub_status(conn: sqlite3.Connection, city: str) -> dict:
-    ensure_hub_city(conn, city)
-    prices = get_hub_prices(conn, city)
+def get_hub_status(
+    conn: sqlite3.Connection,
+    city: str,
+    world_id: str = SHARED_WORLD_ID,
+) -> dict:
+    ensure_hub_city(conn, city, world_id)
+    prices = get_hub_prices(conn, city, world_id)
     inventory = conn.execute(
         """
-        SELECT resource_id, qty FROM hub_inventory WHERE city = ?
+        SELECT resource_id, qty FROM hub_inventory
+        WHERE world_id = ? AND city = ?
         ORDER BY resource_id
         """,
-        (city,),
+        (world_id, city),
     ).fetchall()
     defs = _resource_defs()
     resources = []
@@ -142,7 +164,7 @@ def get_hub_status(conn: sqlite3.Connection, city: str) -> dict:
                 "guide_price": _guide_price(rid),
             }
         )
-    return {"city": city, "resources": resources}
+    return {"city": city, "world_id": world_id, "resources": resources}
 
 
 def purchase_hub_resources(
@@ -151,9 +173,10 @@ def purchase_hub_resources(
     city: str,
     institution_id: str,
     inputs: list[dict],
+    world_id: str = SHARED_WORLD_ID,
 ) -> tuple[bool, int, str]:
     """Debit institution wallet, hub inventory; return (ok, total_cost, reason)."""
-    prices = get_hub_prices(conn, city)
+    prices = get_hub_prices(conn, city, world_id)
     total = 0
     for inp in inputs:
         rid = inp["resource"]
@@ -175,9 +198,10 @@ def purchase_hub_resources(
         qty = int(inp["qty"])
         row = conn.execute(
             """
-            SELECT qty FROM hub_inventory WHERE city = ? AND resource_id = ?
+            SELECT qty FROM hub_inventory
+            WHERE world_id = ? AND city = ? AND resource_id = ?
             """,
-            (city, rid),
+            (world_id, city, rid),
         ).fetchone()
         available = int(row["qty"]) if row else 0
         if available < qty:
@@ -204,14 +228,14 @@ def purchase_hub_resources(
             """
             UPDATE hub_inventory
             SET qty = qty - ?, updated_at = datetime('now')
-            WHERE city = ? AND resource_id = ?
+            WHERE world_id = ? AND city = ? AND resource_id = ?
             """,
-            (qty, city, rid),
+            (qty, world_id, city, rid),
         )
         add_economy_ledger(
             conn,
             account_kind="hub",
-            account_id=f"{city}:{rid}",
+            account_id=f"{world_id}:{city}:{rid}",
             amount=unit * qty,
             entry_type="hub_sale",
             ref_type="institution",

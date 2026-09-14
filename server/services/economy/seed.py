@@ -8,6 +8,7 @@ import uuid
 from config_loader import economy_institutions, economy_pop_groups
 from db import utc_now
 from services.economy.config import add_economy_ledger, default_pref_json
+from services.world_session.constants import SHARED_WORLD_ID
 
 
 def _institution_count(conn: sqlite3.Connection) -> int:
@@ -30,12 +31,13 @@ def seed_economy(conn: sqlite3.Connection) -> None:
         conn.execute(
             """
             INSERT INTO institutions (
-                id, city, kind, display_name, owner_kind, owner_id, offer_id,
+                id, world_id, city, kind, display_name, owner_kind, owner_id, offer_id,
                 wallet_credits, open, production_lines_json, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
             """,
             (
                 inst["id"],
+                SHARED_WORLD_ID,
                 inst.get("city", city),
                 inst["kind"],
                 inst["display_name"],
@@ -83,12 +85,13 @@ def seed_economy(conn: sqlite3.Connection) -> None:
         conn.execute(
             """
             INSERT INTO pop_groups (
-                id, city, headcount, wallet_credits, primary_institution_id,
+                id, world_id, city, headcount, wallet_credits, primary_institution_id,
                 job_type, job_display, pref_json, created_at, updated_at
-            ) VALUES (?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
             """,
             (
                 group["id"],
+                SHARED_WORLD_ID,
                 city,
                 headcount,
                 group.get("primary_institution_id"),
@@ -102,10 +105,10 @@ def seed_economy(conn: sqlite3.Connection) -> None:
 
     conn.execute(
         """
-        INSERT INTO city_welfare_fund (city, balance, last_grant_date, updated_at)
-        VALUES (?, 0, NULL, ?)
+        INSERT INTO city_welfare_fund (world_id, city, balance, last_grant_date, updated_at)
+        VALUES (?, ?, 0, NULL, ?)
         """,
-        (city, now),
+        (SHARED_WORLD_ID, city, now),
     )
     add_economy_ledger(
         conn,

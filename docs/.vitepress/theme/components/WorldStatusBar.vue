@@ -4,11 +4,12 @@ import { useRoute } from 'vitepress'
 import { useGame, type PlayerFocus, type WorldClock } from '../composables/useGame'
 
 const route = useRoute()
-const { loadWorldClock, loadFocus, loadWorldSession, setWorldSpeed } = useGame()
+const { loadWorldClock, loadFocus, loadWorldSession, setWorldSpeed, advanceSoloTick } = useGame()
 
 const clock = ref<WorldClock | null>(null)
 const focus = ref<PlayerFocus | null>(null)
 const sessionScope = ref<string | null>(null)
+const ticking = ref(false)
 let timer: ReturnType<typeof setInterval> | undefined
 
 const show = computed(
@@ -37,6 +38,21 @@ async function onSpeed(speed: string) {
   clock.value = await setWorldSpeed(speed)
 }
 
+async function onAdvanceDay() {
+  if (sessionScope.value !== 'solo' || ticking.value) return
+  ticking.value = true
+  try {
+    const result = await advanceSoloTick()
+    if (clock.value) {
+      clock.value = { ...clock.value, world_day: result.world_day }
+    } else {
+      clock.value = await loadWorldClock()
+    }
+  } finally {
+    ticking.value = false
+  }
+}
+
 onMounted(() => {
   refreshBar()
   timer = setInterval(refreshBar, 60000)
@@ -54,6 +70,9 @@ onUnmounted(() => {
     <span v-if="focusLabel" class="mw-status-item mw-status-focus">{{ focusLabel }}</span>
     <span v-if="clock.next_tick_hint" class="mw-status-item mw-dim">{{ clock.next_tick_hint }}</span>
     <span v-if="sessionScope === 'solo'" class="mw-speeds">
+      <button type="button" class="mw-spd mw-advance" :disabled="ticking" @click="onAdvanceDay">
+        {{ ticking ? '…' : '推进一日' }}
+      </button>
       <button type="button" class="mw-spd" @click="onSpeed('pause')">停</button>
       <button type="button" class="mw-spd" @click="onSpeed('slow')">慢</button>
       <button type="button" class="mw-spd" @click="onSpeed('mid')">中</button>
@@ -91,4 +110,11 @@ onUnmounted(() => {
   font-size: 0.6875rem;
   cursor: pointer;
 }
+.mw-advance {
+  min-width: auto;
+  padding: 0.15rem 0.5rem;
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+.mw-advance:disabled { opacity: 0.6; cursor: wait; }
 </style>

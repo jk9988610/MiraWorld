@@ -9,6 +9,8 @@ from schemas.world_gate import (
     FocusResponse,
     PlayerScheduleBody,
     PlayerScheduleResponse,
+    SoloTickResponse,
+    SoloWorldStatusResponse,
     WorldClockResponse,
     WorldContinueBody,
     WorldGateResponse,
@@ -29,6 +31,7 @@ from services.world_session.gate import (
     set_speed,
 )
 from services.world_session.schedule import get_focus, get_schedule, set_focus_override, update_schedule
+from services.world_session.solo_world import advance_solo_tick, get_solo_status
 
 router = APIRouter(tags=["world-gate"])
 
@@ -89,6 +92,16 @@ def world_clock(player: PlayerPublic = Depends(get_current_player)) -> dict:
 def world_speed(body: WorldSpeedBody, player: PlayerPublic = Depends(get_current_player)) -> dict:
     set_speed(player.id, body.speed)
     return get_clock(player.id)
+
+
+@router.get("/world/solo/status", response_model=SoloWorldStatusResponse)
+def world_solo_status(player: PlayerPublic = Depends(get_current_player)) -> dict:
+    return get_solo_status(player.id)
+
+
+@router.post("/world/tick", response_model=SoloTickResponse)
+def world_solo_tick(player: PlayerPublic = Depends(get_current_player)) -> dict:
+    return advance_solo_tick(player.id)
 
 
 @router.get("/me/schedule", response_model=PlayerScheduleResponse)
