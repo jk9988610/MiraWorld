@@ -274,6 +274,7 @@ def init_db() -> None:
         _migrate_v22_schema(conn)
         _seed_economy_if_empty(conn)
         _migrate_v22_institutions(conn)
+        _migrate_v23_player_production(conn)
 
 
 def _migrate_orders_v20(conn: sqlite3.Connection) -> None:
@@ -678,6 +679,26 @@ def _migrate_v22_institutions(conn: sqlite3.Connection) -> None:
                 ),
             )
     _meta_set(conn, "v22_tech_institution")
+
+
+def _migrate_v23_player_production(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS institution_offers (
+            id TEXT PRIMARY KEY,
+            institution_id TEXT NOT NULL,
+            player_id INTEGER NOT NULL,
+            item_id TEXT NOT NULL,
+            qty INTEGER NOT NULL DEFAULT 1,
+            price_credits INTEGER NOT NULL,
+            display TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE,
+            FOREIGN KEY (player_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
 
 
 def _seed_economy_if_empty(conn: sqlite3.Connection) -> None:

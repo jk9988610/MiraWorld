@@ -153,6 +153,7 @@ function fmt(n: number | undefined) {
 
     <p class="mw-back">
       <a href="/miraworld/play/city.html">← 回潮灯市地图</a>
+      · <a href="/miraworld/play/production.html">生产 · 挂市场</a>
       · <a href="/miraworld/play/economy.html">城市经营</a>
     </p>
   </div>

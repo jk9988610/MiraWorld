@@ -82,6 +82,83 @@ def run_v20_once(base: str, run_index: int) -> None:
     )
 
 
+def run_v23_production_once(base: str, run_index: int) -> None:
+    jar = CookieJar()
+    opener = build_opener(HTTPCookieProcessor(jar))
+    handle = f"产{run_index:02d}{uuid.uuid4().hex[:4]}"
+    tick_secret = os.environ.get("MIRAWORLD_TICK_SECRET", "dev-tick-secret")
+
+    api(base, opener, "POST", "/auth/register", {"handle": handle, "password": PASSWORD})
+    api(base, opener, "POST", "/shop/apply", {"display_name": f"产{run_index}设备"})
+    api(base, opener, "POST", "/capital/company", {"display_name": f"产{run_index}号科技"})
+
+    status = api(base, opener, "GET", "/capital/production")
+    if not status.get("has_shop") or not status.get("has_company"):
+        raise DemoError(f"expected shop+company: {status}")
+
+    setup = api(base, opener, "POST", "/capital/production/setup", None)
+    if not setup.get("institution", {}).get("production_ready"):
+        raise DemoError(f"setup failed: {setup}")
+
+    claim = api(base, opener, "POST", "/capital/daily-investment", None)
+    amount = int((claim.get("grant") or {}).get("amount", 0))
+    if amount < 200000:
+        raise DemoError(f"daily investment too low: {claim}")
+
+    api(
+        base,
+        opener,
+        "POST",
+        "/capital/production/institution-transfer",
+        {"source": "player", "amount": 50000},
+    )
+
+    lines = api(
+        base,
+        opener,
+        "PATCH",
+        "/capital/production/lines",
+        {"lines": [{"recipe_id": "recipe_smart_terminal_v1", "enabled": True}]},
+    )
+    if not any(l.get("enabled") for l in (lines.get("production_lines") or [])):
+        raise DemoError(f"lines not enabled: {lines}")
+
+    api(
+        base,
+        opener,
+        "POST",
+        f"/economy/tick?city={quote(CITY)}&force=1",
+        None,
+        extra_headers={"X-Tick-Secret": tick_secret},
+    )
+
+    after = api(base, opener, "GET", "/capital/production")
+    inv = after.get("inventory") or []
+    terminal = next((i for i in inv if i.get("item_id") == "item_smart_terminal"), None)
+    if not terminal or int(terminal.get("qty", 0)) < 1:
+        raise DemoError(f"expected terminal inventory after tick: {inv}")
+
+    offer = api(
+        base,
+        opener,
+        "POST",
+        "/capital/production/offers",
+        {
+            "item_id": "item_smart_terminal",
+            "display": "产测终端",
+            "price_credits": 22,
+            "qty": 1,
+        },
+    )
+    if not offer.get("id"):
+        raise DemoError(f"offer create failed: {offer}")
+
+    print(
+        f"  v2.2-prod run {run_index}: OK handle={handle} stock={terminal.get('qty')} offer={offer.get('id')}",
+        flush=True,
+    )
+
+
 def run_v22_once(base: str, run_index: int) -> None:
     tick_secret = os.environ.get("MIRAWORLD_TICK_SECRET", "dev-tick-secret")
     opener = build_opener()
@@ -588,6 +665,11 @@ def main() -> int:
         help="Number of full demo passes (default: 5)",
     )
     parser.add_argument(
+        "--v22-prod",
+        action="store_true",
+        help="Run v2.2 player production + market offer demo",
+    )
+    parser.add_argument(
         "--v22",
         action="store_true",
         help="Run v2.2 two-layer hub + production demo",
@@ -634,7 +716,10 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    if args.v22:
+    if args.v22_prod:
+        label = "v2.2 player production"
+        runner = run_v23_production_once
+    elif args.v22:
         label = "v2.2 two-layer"
         runner = run_v22_once
     elif args.v21:
