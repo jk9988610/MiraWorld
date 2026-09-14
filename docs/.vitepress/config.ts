@@ -41,6 +41,7 @@ export default defineConfig({
         text: '游戏',
         items: [
           { text: '怎么玩', link: '/play/help' },
+          { text: '选档进门', link: '/play/gate' },
           { text: '潮灯市', link: '/play/city' },
           { text: '城市经营', link: '/play/economy' },
           { text: '资本家', link: '/play/capital' },

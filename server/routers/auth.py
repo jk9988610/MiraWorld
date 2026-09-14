@@ -12,6 +12,7 @@ from auth_util import (
 from deps import get_current_player
 from schemas.player import LoginBody, PlayerPublic, RegisterBody
 from services.players import login_player, register_player
+from services.world_session.gate import autosave
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -36,7 +37,11 @@ def login(body: LoginBody, response: Response) -> PlayerPublic:
 
 
 @router.post("/logout")
-def logout(response: Response) -> dict[str, bool]:
+def logout(
+    response: Response,
+    player: PlayerPublic = Depends(get_current_player),
+) -> dict[str, bool]:
+    autosave(player.id)
     clear_session_cookie(response)
     return {"ok": True}
 
