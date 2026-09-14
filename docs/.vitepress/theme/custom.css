@@ -1,59 +1,67 @@
 :root {
-  --vp-c-brand-1: #0d7377;
-  --vp-c-brand-2: #14919b;
-  --vp-c-brand-3: #0a5c5f;
-  --vp-c-brand-soft: rgba(13, 115, 119, 0.12);
+  /* VS Code Dark Modern-inspired palette: blue accent, neutral editor surfaces. */
+  --vp-c-brand-1: #007acc;
+  --vp-c-brand-2: #1a85c7;
+  --vp-c-brand-3: #005a9e;
+  --vp-c-brand-soft: rgba(0, 122, 204, 0.16);
 
-  --vp-c-text-1: #1a1f24;
-  --vp-c-text-2: #3d4650;
-  --vp-c-text-3: #6b7580;
+  --vp-c-text-1: #1f1f1f;
+  --vp-c-text-2: #424242;
+  --vp-c-text-3: #6e6e6e;
 
-  --vp-c-bg: #f3f6f4;
-  --vp-c-bg-alt: #e8eeea;
-  --vp-c-bg-elv: #fafcfb;
-  --vp-c-bg-soft: #e4ebe6;
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f3f3f3;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #e7e7e7;
 
-  --vp-c-divider: #c5d0c8;
-  --vp-c-gutter: #d5ddd7;
+  --vp-c-divider: #d6d6d6;
+  --vp-c-gutter: #e5e5e5;
+  --vp-c-border: #c8c8c8;
 
-  --vp-c-border: #b8c4bc;
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(120deg, #0a5c5f 30%, #1a8f6e);
+  --vp-home-hero-name-background: linear-gradient(120deg, #005a9e 30%, #007acc);
   --vp-home-hero-image-background-image: radial-gradient(
     ellipse at center,
-    rgba(13, 115, 119, 0.18) 0%,
+    rgba(0, 122, 204, 0.16) 0%,
     transparent 70%
   );
 
-  --mw-ink: #1a1f24;
-  --mw-accent: #0d7377;
-  --mw-paper: #f3f6f4;
+  --mw-ink: #1f1f1f;
+  --mw-accent: #007acc;
+  --mw-paper: #ffffff;
+  --mw-danger: #c72e2e;
+  --mw-on-accent: #ffffff;
 }
 
 .dark {
-  --vp-c-brand-1: #5ec4c8;
-  --vp-c-brand-2: #3aa8ad;
-  --vp-c-brand-3: #7dd4d7;
-  --vp-c-brand-soft: rgba(94, 196, 200, 0.16);
+  /* VS Code Dark Modern surfaces and text. */
+  --vp-c-brand-1: #3794ff;
+  --vp-c-brand-2: #4daafc;
+  --vp-c-brand-3: #75beff;
+  --vp-c-brand-soft: rgba(55, 148, 255, 0.18);
 
-  --vp-c-bg: #12181a;
-  --vp-c-bg-alt: #0e1315;
-  --vp-c-bg-elv: #1a2225;
-  --vp-c-bg-soft: #1c2528;
+  --vp-c-bg: #1e1e1e;
+  --vp-c-bg-alt: #181818;
+  --vp-c-bg-elv: #252526;
+  --vp-c-bg-soft: #2d2d2d;
 
-  --vp-c-text-1: #e8eeea;
-  --vp-c-text-2: #b8c4bc;
-  --vp-c-text-3: #84908a;
+  --vp-c-text-1: #cccccc;
+  --vp-c-text-2: #b8b8b8;
+  --vp-c-text-3: #858585;
 
-  --vp-c-divider: #2a3538;
-  --vp-c-gutter: #1e282b;
-  --vp-c-border: #2f3c40;
+  --vp-c-divider: #3e3e42;
+  --vp-c-gutter: #252526;
+  --vp-c-border: #454545;
+  --mw-ink: #cccccc;
+  --mw-paper: #1e1e1e;
+  --mw-danger: #f14c4c;
+  --mw-on-accent: #ffffff;
 }
 
 body {
   background-image:
-    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(13, 115, 119, 0.07), transparent 50%),
-    radial-gradient(ellipse 80% 60% at 100% 0%, rgba(26, 143, 110, 0.05), transparent 45%);
+    radial-gradient(ellipse 120% 80% at 10% -20%, rgba(0, 122, 204, 0.06), transparent 50%),
+    radial-gradient(ellipse 80% 60% at 100% 0%, rgba(55, 148, 255, 0.04), transparent 45%);
   background-attachment: fixed;
 }
 

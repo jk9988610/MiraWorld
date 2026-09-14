@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from auth_util import JWT_SECRET
 from db import init_db
 from routers import auth, bounties, capital, catalog, economy, me, records, shop, stacks, world, world_gate
+from services.world_session.multi_clock import start_scheduler
 
 app = FastAPI(title="米拉世界 MiraWorld", version="1.0.0-mvp")
 
@@ -33,11 +34,16 @@ app.include_router(capital.router)
 app.include_router(world_gate.router)
 
 
+_multi_clock_stop = None
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     if JWT_SECRET == "dev-secret-change-me" and os.environ.get("MIRAWORLD_ENV") == "production":
         raise RuntimeError("Set MIRAWORLD_JWT_SECRET in production")
     init_db()
+    global _multi_clock_stop
+    _multi_clock_stop = start_scheduler()
 
 
 @app.get("/health")

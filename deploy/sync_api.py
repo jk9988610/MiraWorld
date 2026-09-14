@@ -20,7 +20,12 @@ def main() -> int:
         print("server/ missing", file=sys.stderr)
         return 1
 
-    tarball = Path(tempfile.mkstemp(prefix="miraworld_srv_", suffix=".tar.gz")[1])
+    fd, tarball_name = tempfile.mkstemp(prefix="miraworld_srv_", suffix=".tar.gz")
+    # mkstemp returns an open file descriptor; close it before tarfile/SFTP use,
+    # otherwise Windows keeps the temporary archive locked during cleanup.
+    import os
+    os.close(fd)
+    tarball = Path(tarball_name)
     print(f"打包 server -> {tarball} ...", flush=True)
     with tarfile.open(tarball, "w:gz") as tar:
         tar.add(SERVER_DIR, arcname=".")

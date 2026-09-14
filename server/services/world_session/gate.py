@@ -8,7 +8,7 @@ from db import db, utc_now
 from fastapi import HTTPException
 from services.world_session.constants import DEFAULT_CITY, SHARED_WORLD_ID
 from services.world_session.schedule import ensure_schedule
-from services.world_session.solo_world import seed_solo_world
+from services.world_session.multi_clock import get_multi_clock, set_multi_speed
 
 
 def _save_row(row: sqlite3.Row) -> dict:
@@ -44,14 +44,19 @@ def _last_save_id(saves: list[dict]) -> str | None:
 
 def _multi_world_day(conn: sqlite3.Connection) -> int:
     row = conn.execute(
+        "SELECT value FROM app_meta WHERE key = ?",
+        ("multi_clock_day",),
+    ).fetchone()
+    if row is not None:
+        return max(1, int(row["value"]))
+    count = conn.execute(
         """
         SELECT COUNT(*) AS c FROM economy_ticks
         WHERE city = ? AND world_id = ?
         """,
         (DEFAULT_CITY, SHARED_WORLD_ID),
     ).fetchone()
-    count = int(row["c"]) if row else 0
-    return max(1, count)
+    return max(1, int(count["c"]) + 1 if count else 1)
 
 
 def get_gate_status(player_id: int, handle: str) -> dict:
@@ -313,33 +318,28 @@ def get_clock(player_id: int) -> dict:
             "speed_label": "—",
             "next_tick_hint": None,
         }
-    with db() as conn:
-        if save["scope"] == "multi":
-            world_day = _multi_world_day(conn)
-            speed_label = "中"
-        else:
-            world_day = int(save["world_day"])
-            speed_map = {
-                "pause": "暂停",
-                "slow": "慢",
-                "mid": "中",
-                "fast": "快",
-                "fastest": "极快",
-            }
-            speed_label = speed_map.get(save["speed"], save["speed"])
-        last = conn.execute(
-            """
-            SELECT tick_date, created_at FROM economy_ticks
-            WHERE city = ? AND world_id = ? ORDER BY tick_date DESC LIMIT 1
-            """,
-            (DEFAULT_CITY, SHARED_WORLD_ID),
-        ).fetchone()
-    hint = f"最近 tick：{last['tick_date']}" if last else "等待首次城市 tick"
+    if save["scope"] == "multi":
+        clock = get_multi_clock()
+        world_day = clock["world_day"]
+        speed_map = {"slow": "慢", "mid": "中", "fast": "快", "fastest": "急速", "pause": "暂停"}
+        speed_label = speed_map.get(clock["speed"], clock["speed"])
+        hint = f"游戏速度：{speed_label} · 现实 {int({'slow': 30, 'mid': 12, 'fast': 6, 'fastest': 3}.get(clock['speed'], 12))} 秒/游戏日"
+    else:
+        world_day = int(save["world_day"])
+        speed_map = {
+            "pause": "暂停",
+            "slow": "慢",
+            "mid": "中",
+            "fast": "快",
+            "fastest": "极快",
+        }
+        speed_label = speed_map.get(save["speed"], save["speed"])
+        hint = None
     return {
         "scope": save["scope"],
         "world_day": world_day,
         "speed_label": speed_label,
-        "next_tick_hint": hint if save["scope"] == "multi" else None,
+        "next_tick_hint": hint,
     }
 
 
@@ -352,10 +352,16 @@ def set_speed(player_id: int, speed: str) -> dict:
         if sess is None:
             raise HTTPException(status_code=400, detail="尚未进入任何模式")
         save = _get_save(conn, player_id, sess["active_save_id"])
-        if save["scope"] != "solo":
-            raise HTTPException(status_code=400, detail="仅单人模式可调速度")
-        conn.execute(
-            "UPDATE world_saves SET speed = ? WHERE id = ?",
-            (speed, save["id"]),
-        )
+        if save["scope"] == "multi":
+            if speed not in {"slow", "mid", "fast", "fastest"}:
+                raise HTTPException(status_code=400, detail="多人模式支持慢、中、快、急速")
+        elif speed not in {"pause", "slow", "mid", "fast", "fastest"}:
+            raise HTTPException(status_code=400, detail="速度无效")
+        else:
+            conn.execute(
+                "UPDATE world_saves SET speed = ? WHERE id = ?",
+                (speed, save["id"]),
+            )
+    if save["scope"] == "multi":
+        set_multi_speed(speed)
     return get_clock(player_id)
