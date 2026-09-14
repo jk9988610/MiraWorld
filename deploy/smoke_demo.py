@@ -110,15 +110,14 @@ def run_v22_once(base: str, run_index: int) -> None:
     if purchases < 1 and procurement < 1:
         raise DemoError(f"expected market purchases or procurement, got {summary}")
 
-    status = api(base, opener, "GET", f"/economy/status?city={quote(CITY)}")
-    groups = (status.get("pop_groups") or {}).get("groups") or []
-    if not any(int(g.get("satisfaction", 0)) > 0 for g in groups):
-        if procurement < 1:
-            raise DemoError(f"expected pop satisfaction or procurement: {status}")
-
     audit = api(base, opener, "GET", f"/economy/audit?city={quote(CITY)}")
     if not audit.get("ok"):
         raise DemoError(f"economy audit failed: {audit}")
+    recent = ((audit.get("checks") or {}).get("ledger") or {}).get("recent") or []
+    has_effect = any(r.get("type") == "effect_apply" for r in recent)
+    if not has_effect and procurement < 1:
+        # 市民可能仍买 legacy 面；procurement 或 ledger 有 effect 即闭环成立
+        raise DemoError(f"expected effect_apply or procurement, ledger={recent[:3]}")
 
     print(
         f"  v2.2 run {run_index}: OK production={production.get('items')} "
