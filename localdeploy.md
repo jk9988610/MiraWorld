@@ -213,3 +213,45 @@ python deploy\sync_api.py
 ```
 
 这两个命令是上传到远程服务器用的。
+
+开发阶段
+使用本地：
+```powershell
+cd E:\MiraWorld
+powershell -ExecutionPolicy Bypass -File .\scripts\dev-api.ps1
+```
+
+另开窗口：
+```powershell
+cd E:\MiraWorld
+npm run docs:dev
+```
+测试通过后：
+```powershell
+npm run docs:build
+python -m compileall -q server deploy
+```
+正式发布
+只修改前端：
+```powershell
+npm run docs:build
+python deploy\deploy.py
+```
+修改后端：
+```powershell
+python deploy\sync_api.py
+```
+前后端都修改：
+```powershell
+npm run docs:build
+python deploy\deploy.py
+python deploy\sync_api.py
+```
+然后检查：
+```text
+curl.exe http://8.133.252.224/miraworld/api/health
+```
+最后访问：
+```text
+http://8.133.252.224/miraworld/
+```
