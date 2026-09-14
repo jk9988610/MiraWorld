@@ -57,3 +57,23 @@ def pop_spotlight_names() -> dict:
 
 def capitalist_economy() -> dict:
     return load_json("economy/capitalist.json")
+
+
+def l0_resources() -> dict:
+    return load_json("l0/resources.json")
+
+
+def l0_hub_pricing() -> dict:
+    return load_json("l0/hub_pricing.json")
+
+
+def l0_facilities() -> dict:
+    return load_json("l0/facilities.json")
+
+
+def l1_recipes() -> dict:
+    return load_json("l1/recipes.json")
+
+
+def economy_market_offers() -> dict:
+    return load_json("economy/market_offers.json")

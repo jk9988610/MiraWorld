@@ -123,5 +123,6 @@ title: 怎么玩
 | `GET /capital/status` | 总资产、可否领取 |
 | `POST /capital/daily-investment` | 领取今日日投（每日一次） |
 | `POST /capital/company` | 登记公司（一玩家一公司） |
+| `POST /capital/company/transfer` | 个人 ↔ 公司账划转 |
 
 **UI：** [资本家日投](/play/capital.html) · 验收：`npm run smoke:capital`

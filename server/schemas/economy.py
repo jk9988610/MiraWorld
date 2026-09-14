@@ -19,10 +19,25 @@ class EconomyPopGroupPublic(BaseModel):
     primary_institution_id: str | None = None
     job_type: str | None = None
     job_display: str | None = None
+    satisfaction: int = 0
+
+
+class HubResourcePublic(BaseModel):
+    resource_id: str
+    display: str
+    qty: int
+    price_credits: int
+    guide_price: int
+
+
+class HubStatusPublic(BaseModel):
+    city: str
+    resources: list[HubResourcePublic]
 
 
 class EconomyStatusResponse(BaseModel):
     city: str
+    hub: HubStatusPublic | None = None
     institutions: list[EconomyInstitutionPublic]
     pop_groups: dict
     welfare_fund: dict | None

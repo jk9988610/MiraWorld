@@ -82,6 +82,51 @@ def run_v20_once(base: str, run_index: int) -> None:
     )
 
 
+def run_v22_once(base: str, run_index: int) -> None:
+    tick_secret = os.environ.get("MIRAWORLD_TICK_SECRET", "dev-tick-secret")
+    opener = build_opener()
+
+    hub = api(base, opener, "GET", f"/economy/hub?city={quote(CITY)}")
+    resources = hub.get("resources") or []
+    if len(resources) < 5:
+        raise DemoError(f"expected 5 hub resources, got {hub}")
+
+    tick = api(
+        base,
+        opener,
+        "POST",
+        f"/economy/tick?city={quote(CITY)}&force=1",
+        None,
+        extra_headers={"X-Tick-Secret": tick_secret},
+    )
+    if not tick.get("ok"):
+        raise DemoError(f"tick failed: {tick}")
+    summary = tick.get("summary") or {}
+    production = summary.get("production") or {}
+    if int(production.get("items", 0)) < 1:
+        raise DemoError(f"expected production items, got {production}")
+    purchases = (summary.get("purchases") or {}).get("count", 0)
+    procurement = (summary.get("procurement") or {}).get("count", 0)
+    if purchases < 1 and procurement < 1:
+        raise DemoError(f"expected market purchases or procurement, got {summary}")
+
+    status = api(base, opener, "GET", f"/economy/status?city={quote(CITY)}")
+    groups = (status.get("pop_groups") or {}).get("groups") or []
+    if not any(int(g.get("satisfaction", 0)) > 0 for g in groups):
+        if procurement < 1:
+            raise DemoError(f"expected pop satisfaction or procurement: {status}")
+
+    audit = api(base, opener, "GET", f"/economy/audit?city={quote(CITY)}")
+    if not audit.get("ok"):
+        raise DemoError(f"economy audit failed: {audit}")
+
+    print(
+        f"  v2.2 run {run_index}: OK production={production.get('items')} "
+        f"purchases={purchases} procurement={procurement}",
+        flush=True,
+    )
+
+
 def run_v21_once(base: str, run_index: int) -> None:
     jar = CookieJar()
     opener = build_opener(HTTPCookieProcessor(jar))
@@ -135,8 +180,27 @@ def run_v21_once(base: str, run_index: int) -> None:
     if not company.get("id"):
         raise DemoError(f"company create failed: {company}")
 
+    deposit = api(
+        base,
+        opener,
+        "POST",
+        "/capital/company/transfer",
+        {"direction": "to_company", "amount": 1000},
+    )
+    if int(deposit.get("company_wallet", 0)) < 1000:
+        raise DemoError(f"company deposit failed: {deposit}")
+    withdraw = api(
+        base,
+        opener,
+        "POST",
+        "/capital/company/transfer",
+        {"direction": "to_player", "amount": 500},
+    )
+    if int(withdraw.get("company_wallet", 0)) != 500:
+        raise DemoError(f"company withdraw failed: {withdraw}")
+
     print(
-        f"  v2.1 run {run_index}: OK grant={amount} company={company.get('display_name')}",
+        f"  v2.1 run {run_index}: OK grant={amount} transfer company={company.get('display_name')}",
         flush=True,
     )
 
@@ -530,6 +594,11 @@ def main() -> int:
         help="Number of full demo passes (default: 5)",
     )
     parser.add_argument(
+        "--v22",
+        action="store_true",
+        help="Run v2.2 two-layer hub + production demo",
+    )
+    parser.add_argument(
         "--v21",
         action="store_true",
         help="Run v2.1 daily investment + company demo",
@@ -571,7 +640,10 @@ def main() -> int:
         return 1
 
     base = args.base.rstrip("/")
-    if args.v21:
+    if args.v22:
+        label = "v2.2 two-layer"
+        runner = run_v22_once
+    elif args.v21:
         label = "v2.1 capital"
         runner = run_v21_once
     elif args.v20:

@@ -14,6 +14,7 @@ from schemas.economy import (
 from services.economy.audit import audit_economy
 from services.economy.spotlight import list_spotlight
 from services.economy.tick import get_economy_status, run_daily_tick
+from services.l0.hub import get_hub_status
 
 router = APIRouter(prefix="/economy", tags=["economy"])
 
@@ -28,6 +29,12 @@ def _verify_tick_secret(secret: str | None) -> None:
 @router.get("/status", response_model=EconomyStatusResponse)
 def economy_status(city: str = "潮灯市") -> dict:
     return get_economy_status(city)
+
+
+@router.get("/hub")
+def economy_hub(city: str = "潮灯市") -> dict:
+    with db() as conn:
+        return get_hub_status(conn, city)
 
 
 @router.get("/audit", response_model=EconomyAuditResponse)

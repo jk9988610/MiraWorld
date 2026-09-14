@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import uuid
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -270,7 +271,9 @@ def init_db() -> None:
         _run_v20_p3_migrations(conn)
         _create_v21_capital_tables(conn)
         _migrate_v21_p2_company(conn)
+        _migrate_v22_schema(conn)
         _seed_economy_if_empty(conn)
+        _migrate_v22_institutions(conn)
 
 
 def _migrate_orders_v20(conn: sqlite3.Connection) -> None:
@@ -525,6 +528,156 @@ def _migrate_v21_p2_company(conn: sqlite3.Connection) -> None:
                 company_id=shop["company_id"],
             )
         _meta_set(conn, "player_shop_institutions")
+
+
+def _migrate_v22_schema(conn: sqlite3.Connection) -> None:
+    from services.l0.hub import ensure_hub_city
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS hub_inventory (
+            city TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            qty INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (city, resource_id)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS hub_prices (
+            city TEXT NOT NULL,
+            resource_id TEXT NOT NULL,
+            price_credits INTEGER NOT NULL,
+            guide_price INTEGER NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (city, resource_id)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS institution_inventory (
+            institution_id TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            qty INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (institution_id, item_id),
+            FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS institution_deployments (
+            institution_id TEXT NOT NULL,
+            item_id TEXT NOT NULL,
+            qty_active INTEGER NOT NULL DEFAULT 0,
+            source_order_id TEXT,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (institution_id, item_id),
+            FOREIGN KEY (institution_id) REFERENCES institutions(id) ON DELETE CASCADE
+        )
+        """
+    )
+    inst_cols = _columns(conn, "institutions")
+    if inst_cols and "production_lines_json" not in inst_cols:
+        conn.execute(
+            "ALTER TABLE institutions ADD COLUMN production_lines_json TEXT NOT NULL DEFAULT '[]'"
+        )
+    pop_cols = _columns(conn, "pop_groups")
+    if pop_cols and "satisfaction" not in pop_cols:
+        conn.execute(
+            "ALTER TABLE pop_groups ADD COLUMN satisfaction INTEGER NOT NULL DEFAULT 0"
+        )
+    order_cols = _columns(conn, "orders")
+    if order_cols and "buyer_institution_id" not in order_cols:
+        conn.execute("ALTER TABLE orders ADD COLUMN buyer_institution_id TEXT")
+
+    ensure_hub_city(conn, "潮灯市")
+
+
+def _migrate_v22_institutions(conn: sqlite3.Connection) -> None:
+    import json
+
+    from config_loader import economy_institutions
+    from services.economy.config import add_economy_ledger
+
+    _ensure_app_meta(conn)
+    if _meta_done(conn, "v22_tech_institution"):
+        return
+
+    now = utc_now()
+    city = "潮灯市"
+    for inst in economy_institutions().get("institutions", []):
+        lines = inst.get("production_lines")
+        lines_json = json.dumps(lines or [], ensure_ascii=False)
+        existing = conn.execute(
+            "SELECT id FROM institutions WHERE id = ?",
+            (inst["id"],),
+        ).fetchone()
+        if existing:
+            if lines:
+                conn.execute(
+                    """
+                    UPDATE institutions SET production_lines_json = ?
+                    WHERE id = ?
+                    """,
+                    (lines_json, inst["id"]),
+                )
+            continue
+        seed_cap = int(inst.get("seed_capital", 0))
+        conn.execute(
+            """
+            INSERT INTO institutions (
+                id, city, kind, display_name, owner_kind, owner_id, offer_id,
+                wallet_credits, open, production_lines_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            """,
+            (
+                inst["id"],
+                inst.get("city", city),
+                inst["kind"],
+                inst["display_name"],
+                inst["owner_kind"],
+                inst["owner_id"],
+                inst.get("offer_id"),
+                seed_cap,
+                lines_json,
+                now,
+            ),
+        )
+        if seed_cap:
+            add_economy_ledger(
+                conn,
+                account_kind="institution",
+                account_id=inst["id"],
+                amount=seed_cap,
+                entry_type="seed",
+                ref_type="institution",
+                ref_id=inst["id"],
+            )
+        for slot in inst.get("slots", []):
+            slot_id = f"slot_{uuid.uuid4().hex[:10]}"
+            conn.execute(
+                """
+                INSERT INTO institution_slots (
+                    id, institution_id, job_type, job_display, headcount,
+                    wage_per_capita, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    slot_id,
+                    inst["id"],
+                    slot["job_type"],
+                    slot["job_display"],
+                    int(slot.get("headcount", 1)),
+                    int(slot.get("wage_per_capita", 12)),
+                    now,
+                ),
+            )
+    _meta_set(conn, "v22_tech_institution")
 
 
 def _seed_economy_if_empty(conn: sqlite3.Connection) -> None:

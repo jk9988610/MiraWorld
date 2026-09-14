@@ -40,6 +40,24 @@
       "slots": [
         { "job_type": "blacksmith", "job_display": "铁匠", "headcount": 2, "wage_per_capita": 12 }
       ]
+    },
+    {
+      "id": "inst_tech_device",
+      "city": "潮灯市",
+      "kind": "device_plant",
+      "display_name": "科创设备厂",
+      "owner_kind": "system",
+      "owner_id": "npc_tech_device",
+      "offer_id": null,
+      "seed_capital": 80000,
+      "production_lines": [
+        { "recipe_id": "recipe_smart_terminal_v1", "enabled": true },
+        { "recipe_id": "recipe_med_imager_v1", "enabled": true }
+      ],
+      "slots": [
+        { "job_type": "engineer", "job_display": "工程师", "headcount": 2, "wage_per_capita": 14 },
+        { "job_type": "qc", "job_display": "QC", "headcount": 1, "wage_per_capita": 12 }
+      ]
     }
   ]
 }
