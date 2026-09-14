@@ -6,11 +6,13 @@ const props = defineProps<{
   mode: 'login' | 'register'
 }>()
 
-const { login, register } = useAuth()
+const { login, register, readRememberPrefs } = useAuth()
+const prefs = readRememberPrefs()
 
-const handle = ref('')
+const handle = ref(prefs.handle)
 const password = ref('')
 const email = ref('')
+const remember = ref(prefs.remember)
 const error = ref('')
 const submitting = ref(false)
 
@@ -19,11 +21,11 @@ async function onSubmit() {
   submitting.value = true
   try {
     if (props.mode === 'register') {
-      await register(handle.value, password.value, email.value || undefined)
+      await register(handle.value, password.value, email.value || undefined, remember.value)
     } else {
-      await login(handle.value, password.value)
+      await login(handle.value, password.value, remember.value)
     }
-    window.location.href = '/miraworld/play/gate.html'
+    window.location.assign('/miraworld/play/gate.html')
   } catch (e) {
     error.value = e instanceof Error ? e.message : '操作失败'
   } finally {
@@ -36,7 +38,7 @@ async function onSubmit() {
   <form class="mw-auth-form" @submit.prevent="onSubmit">
     <h1>{{ mode === 'login' ? '登录' : '注册' }}</h1>
     <p class="mw-auth-lead">
-      {{ mode === 'login' ? '登录米拉世界，继续你在潮灯市的旅程。' : '取一个名字，进入潮灯市。新手礼 300 点。' }}
+      {{ mode === 'login' ? '登录米拉世界，选择存档进入潮灯市。' : '取一个名字，进入潮灯市。新手礼 300 点。' }}
     </p>
 
     <label>
@@ -62,20 +64,27 @@ async function onSubmit() {
       <small v-if="mode === 'register'">至少 8 位</small>
     </label>
 
+    <label class="mw-remember">
+      <input v-model="remember" type="checkbox" />
+      自动登录（记住账号，延长登录有效期）
+    </label>
+
     <p v-if="error" class="mw-auth-error">{{ error }}</p>
 
     <button type="submit" class="mw-auth-submit" :disabled="submitting">
-      {{ submitting ? '请稍候…' : mode === 'login' ? '登录' : '进入潮灯市' }}
+      {{ submitting ? '请稍候…' : mode === 'login' ? '登录' : '进入门控' }}
     </button>
 
     <p class="mw-auth-switch">
       <template v-if="mode === 'login'">
         还没有账号？
         <a href="/miraworld/auth/register.html">去注册</a>
+        · <a href="/miraworld/play/gate.html">门控页登录</a>
       </template>
       <template v-else>
         已有账号？
         <a href="/miraworld/auth/login.html">去登录</a>
+        · <a href="/miraworld/play/gate.html">门控页注册</a>
       </template>
     </p>
   </form>
@@ -114,7 +123,9 @@ label span {
   font-weight: 500;
 }
 
-input {
+input[type='text'],
+input[type='password'],
+input[type='email'] {
   width: 100%;
   box-sizing: border-box;
   padding: 0.55rem 0.7rem;
@@ -123,6 +134,13 @@ input {
   background: var(--vp-c-bg);
   color: var(--vp-c-text-1);
   font: inherit;
+}
+
+.mw-remember {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
 }
 
 small {

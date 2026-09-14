@@ -270,6 +270,18 @@ def autosave(player_id: int) -> dict:
     return {"ok": True, "save_id": save_id, "world_day": world_day}
 
 
+def exit_session(player_id: int) -> dict:
+    """Autosave and leave the active world session (back to gate)."""
+    result = autosave(player_id)
+    with db() as conn:
+        conn.execute("DELETE FROM player_sessions WHERE player_id = ?", (player_id,))
+        conn.execute(
+            "UPDATE world_saves SET active = 0 WHERE player_id = ?",
+            (player_id,),
+        )
+    return {"ok": True, "autosaved": bool(result.get("ok")), **{k: v for k, v in result.items() if k != "ok"}}
+
+
 def manual_save(player_id: int) -> dict:
     with db() as conn:
         sess = conn.execute(

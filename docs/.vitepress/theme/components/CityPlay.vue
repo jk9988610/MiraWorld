@@ -1,24 +1,54 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useGame, type GroundItem } from '../composables/useGame'
 import { actionsForTags } from '../utils/itemActions'
+import { hudDay } from '../composables/worldHud'
 
 const { user, refresh, isLoggedIn } = useAuth()
-const { world, loadWorld, visit, spotPut, spotConsume, spotUse, loadMarket } = useGame()
+const {
+  world,
+  loadWorld,
+  visit,
+  spotPut,
+  spotConsume,
+  spotUse,
+  loadMarket,
+  loadWorldSession,
+  loadWorldClock,
+  advanceSoloTick,
+} = useGame()
 const message = ref('')
 const error = ref('')
 const ground = ref<GroundItem | null>(null)
 const groundBusy = ref(false)
 const playerShops = ref<Array<{ player_id: number; display_name: string; handle: string }>>([])
+const soloDay = ref<number | null>(null)
+const ticking = ref(false)
 
 const chaodeng = computed(() => world.value?.cities.find((c) => c.city === '潮灯市'))
 const groundActions = computed(() => actionsForTags(ground.value?.tags))
+const isSolo = computed(() => soloDay.value !== null)
 
 onMounted(async () => {
   await refresh()
   if (!isLoggedIn.value) {
-    window.location.href = '/miraworld/auth/login.html'
+    window.location.replace('/miraworld/play/gate.html')
+    return
+  }
+  try {
+    const sess = await loadWorldSession()
+    if (!sess.active) {
+      window.location.replace('/miraworld/play/gate.html')
+      return
+    }
+    if (sess.save?.scope === 'solo') {
+      const clock = await loadWorldClock()
+      soloDay.value = clock.world_day
+      hudDay.value = clock.world_day
+    }
+  } catch {
+    window.location.replace('/miraworld/play/gate.html')
     return
   }
   await loadWorld()
@@ -40,6 +70,26 @@ onMounted(async () => {
       error.value = e instanceof Error ? e.message : '打卡失败'
     }
   }
+})
+
+async function onAdvanceDay() {
+  if (ticking.value || !isSolo.value) return
+  ticking.value = true
+  error.value = ''
+  try {
+    const result = await advanceSoloTick()
+    soloDay.value = result.world_day
+    hudDay.value = result.world_day
+    message.value = `世界推进到第 ${result.world_day} 日`
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '推进失败'
+  } finally {
+    ticking.value = false
+  }
+}
+
+watch(hudDay, (d) => {
+  if (d != null && isSolo.value) soloDay.value = d
 })
 
 function applyVisit(msg?: string, g?: GroundItem) {
@@ -90,6 +140,17 @@ async function groundAction(kind: 'put' | 'consume' | 'use') {
     <h1>{{ chaodeng?.city || '潮灯市' }}</h1>
     <p class="mw-lead">{{ chaodeng?.summary }}</p>
     <p v-if="user" class="mw-meta">你在 {{ user.city }} · {{ user.wallet_credits }} 点</p>
+
+    <section v-if="isSolo" class="mw-tick">
+      <div>
+        <strong>单人世界</strong>
+        <span class="mw-dim"> · 第 {{ soloDay }} 日</span>
+      </div>
+      <button type="button" class="mw-tick-btn" :disabled="ticking" @click="onAdvanceDay">
+        {{ ticking ? '推进中…' : '推进一日' }}
+      </button>
+    </section>
+
     <p class="mw-link">
       <a href="/miraworld/play/economy.html">→ 城市经营仪表盘</a>
       · <a href="/miraworld/play/capital.html">→ 资本家日投</a>
@@ -177,7 +238,8 @@ async function groundAction(kind: 'put' | 'consume' | 'use') {
 
 <style scoped>
 .mw-play--pad {
-  padding-bottom: 4.5rem;
+  padding-top: 0.5rem;
+  padding-bottom: 5.5rem;
 }
 
 .mw-play h1 {
@@ -190,6 +252,35 @@ async function groundAction(kind: 'put' | 'consume' | 'use') {
 
 .mw-meta {
   font-size: 0.9375rem;
+}
+
+.mw-tick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--vp-c-brand-1);
+  background: color-mix(in srgb, var(--vp-c-brand-1) 8%, var(--vp-c-bg-elv));
+}
+
+.mw-tick-btn {
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--vp-c-brand-1);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mw-tick-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .mw-msg {

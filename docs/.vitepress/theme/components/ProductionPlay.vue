@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useGame, type ProductionStatus } from '../composables/useGame'
+import { hudTickNonce } from '../composables/worldHud'
 
 const { user, refresh, isLoggedIn } = useAuth()
 const {
@@ -39,6 +40,21 @@ onMounted(async () => {
   await reload()
 })
 
+watch(hudTickNonce, async (n, prev) => {
+  if (!n || n === prev || !isLoggedIn.value) return
+  await reload()
+  const stock = data.value?.inventory.reduce((s, i) => s + i.qty, 0) ?? 0
+  const wallet = data.value?.institution?.wallet_credits ?? 0
+  if (stock > 0) {
+    message.value = `日 tick 已结算：成品仓 ${stock} 件 · 运营账 ${wallet.toLocaleString('zh-CN')} 点`
+  } else if ((data.value?.next_batch_cost ?? 0) > wallet) {
+    message.value = ''
+    error.value = `运营账不够买一轮 Hub 原料（约 ${data.value?.next_batch_cost} 点），成品不会增加`
+  } else {
+    error.value = '日 tick 已过，成品仍为 0（缺编制岗或 Hub 缺货）'
+  }
+})
+
 async function reload() {
   error.value = ''
   try {
@@ -64,7 +80,7 @@ async function onSetup() {
   error.value = ''
   try {
     data.value = await setupProduction()
-    message.value = '已开通设备厂：日 tick 将从 Hub 采购并生产成品'
+    message.value = '已开通设备厂：编制机器员工后，日 tick 从 Hub 采购并生产'
     await reload()
   } catch (e) {
     error.value = e instanceof Error ? e.message : '开通失败'
@@ -209,14 +225,14 @@ function fmt(n: number | undefined) {
 
       <section v-if="!data.institution?.production_ready" class="mw-card">
         <h2>开通设备厂</h2>
-        <p class="mw-dim">将机构升级为 device_plant，启用智能终端配方。</p>
+        <p class="mw-dim">将机构升级为 device_plant，编制机器员工（工程师 / QC），启用智能终端配方。无员工不生产。</p>
         <button type="button" class="mw-btn" :disabled="busy" @click="onSetup">开通生产</button>
       </section>
 
       <template v-else>
         <section class="mw-card">
           <h2>划入机构运营账</h2>
-          <p class="mw-dim">日 tick 生产时从 Hub 扣款，需机构账有钱。</p>
+          <p class="mw-dim">日 tick 生产时从 Hub 扣款，需机构账有钱；无编制岗则跳过生产。</p>
           <div class="mw-form">
             <select v-model="transferSource">
               <option value="company">公司账</option>
@@ -225,6 +241,17 @@ function fmt(n: number | undefined) {
             <input v-model.number="transferAmount" type="number" min="1" />
             <button type="button" class="mw-btn" :disabled="busy" @click="onTransfer">划入</button>
           </div>
+        </section>
+
+        <section class="mw-card">
+          <h2>员工编制</h2>
+          <p v-if="!data.staff.length" class="mw-err">没有在岗编制，日 tick 不会生产。</p>
+          <ul v-else class="mw-list">
+            <li v-for="slot in data.staff" :key="slot.job_type">
+              {{ slot.job_display }} × {{ slot.headcount }}
+              <span class="mw-dim"> · 日薪 {{ slot.wage_per_capita }} 点/人 · 在岗组 {{ slot.employed_groups }}</span>
+            </li>
+          </ul>
         </section>
 
         <section class="mw-card">

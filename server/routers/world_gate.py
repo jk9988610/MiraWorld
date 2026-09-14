@@ -23,6 +23,7 @@ from services.world_session.gate import (
     autosave,
     continue_save,
     create_new_save,
+    exit_session,
     get_clock,
     get_gate_status,
     get_session,
@@ -76,6 +77,11 @@ def world_load(body: WorldLoadBody, player: PlayerPublic = Depends(get_current_p
 @router.post("/world/autosave")
 def world_autosave(player: PlayerPublic = Depends(get_current_player)) -> dict:
     return autosave(player.id)
+
+
+@router.post("/world/exit")
+def world_exit(player: PlayerPublic = Depends(get_current_player)) -> dict:
+    return exit_session(player.id)
 
 
 @router.post("/world/save")

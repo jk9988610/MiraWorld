@@ -6,5 +6,7 @@ docs/.vitepress/cache
 *.log
 __pycache__/
 *.pyc
+server/.venv/
+.venv/
 deploy/.tmp-pass
 deploy/miraworld-dist.tar.gz

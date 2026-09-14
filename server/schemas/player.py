@@ -19,11 +19,13 @@ class RegisterBody(BaseModel):
     handle: str = Field(min_length=2, max_length=32, pattern=r"^[^\s]{2,32}$")
     password: str = Field(min_length=8, max_length=128)
     email: str | None = Field(default=None, max_length=254)
+    remember: bool = False
 
 
 class LoginBody(BaseModel):
     handle: str = Field(min_length=1, max_length=32)
     password: str = Field(min_length=1, max_length=128)
+    remember: bool = False
 
 
 class MeUpdateBody(BaseModel):

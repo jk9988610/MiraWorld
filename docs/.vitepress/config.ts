@@ -22,6 +22,7 @@ export default defineConfig({
     logo: undefined,
     siteTitle: '米拉世界',
     nav: [
+      { text: '门控', link: '/play/gate' },
       { text: '潮灯市', link: '/play/city' },
       { text: '世界', link: '/world/overview' },
       { text: '探索', link: '/world/exploration' },

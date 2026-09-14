@@ -12,6 +12,9 @@ export interface AuthUser {
 }
 
 const API_BASE = '/miraworld/api'
+const REMEMBER_KEY = 'mw_remember'
+const HANDLE_KEY = 'mw_handle'
+
 const user = ref<AuthUser | null>(null)
 const loading = ref(false)
 const checked = ref(false)
@@ -28,6 +31,31 @@ async function parseJson<T>(res: Response): Promise<T> {
     throw new Error(message || `HTTP ${res.status}`)
   }
   return data as T
+}
+
+function readRememberPrefs() {
+  try {
+    return {
+      remember: localStorage.getItem(REMEMBER_KEY) === '1',
+      handle: localStorage.getItem(HANDLE_KEY) || '',
+    }
+  } catch {
+    return { remember: false, handle: '' }
+  }
+}
+
+function writeRememberPrefs(remember: boolean, handle: string) {
+  try {
+    if (remember) {
+      localStorage.setItem(REMEMBER_KEY, '1')
+      localStorage.setItem(HANDLE_KEY, handle)
+    } else {
+      localStorage.removeItem(REMEMBER_KEY)
+      localStorage.removeItem(HANDLE_KEY)
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function useAuth() {
@@ -52,16 +80,17 @@ export function useAuth() {
     }
   }
 
-  async function register(handle: string, password: string, email?: string) {
+  async function register(handle: string, password: string, email?: string, remember = false) {
     loading.value = true
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle, password, email: email || null }),
+        body: JSON.stringify({ handle, password, email: email || null, remember }),
       })
       user.value = await parseJson<AuthUser>(res)
+      writeRememberPrefs(remember, handle)
       return user.value
     } finally {
       loading.value = false
@@ -69,16 +98,17 @@ export function useAuth() {
     }
   }
 
-  async function login(handle: string, password: string) {
+  async function login(handle: string, password: string, remember = false) {
     loading.value = true
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle, password }),
+        body: JSON.stringify({ handle, password, remember }),
       })
       user.value = await parseJson<AuthUser>(res)
+      writeRememberPrefs(remember, handle)
       return user.value
     } finally {
       loading.value = false
@@ -113,5 +143,6 @@ export function useAuth() {
     register,
     login,
     logout,
+    readRememberPrefs,
   }
 }

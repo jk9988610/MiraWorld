@@ -1,28 +1,58 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vitepress'
 import { useShellPolling, shellUnreadCount } from '../composables/useShellState'
+import { useAuth } from '../composables/useAuth'
 import { useGame } from '../composables/useGame'
 
 const route = useRoute()
+const { refresh, isLoggedIn, checked } = useAuth()
 const { loadWorldSession } = useGame()
 useShellPolling()
 
-const show = computed(() => route.path.startsWith('/play/'))
-const path = computed(() => route.path)
-const isGate = computed(() => path.value.includes('/play/gate'))
+function playPath(path: string) {
+  return path.includes('/play/')
+}
 
-onMounted(async () => {
-  if (!show.value || isGate.value) return
+function isGatePath(path: string) {
+  return path.includes('/play/gate')
+}
+
+const show = computed(() => playPath(route.path))
+const path = computed(() => route.path)
+const isGate = computed(() => isGatePath(path.value))
+const showTabs = computed(() => show.value && !isGate.value)
+
+async function enforceAccess() {
+  if (!show.value) return
+  await refresh()
+  if (!isLoggedIn.value) {
+    if (!isGate.value) {
+      window.location.replace('/miraworld/play/gate.html')
+    }
+    return
+  }
+  if (isGate.value) return
   try {
     const sess = await loadWorldSession()
     if (!sess.active) {
-      window.location.href = '/miraworld/play/gate.html'
+      window.location.replace('/miraworld/play/gate.html')
     }
   } catch {
-    window.location.href = '/miraworld/auth/login.html'
+    window.location.replace('/miraworld/play/gate.html')
   }
+}
+
+onMounted(() => {
+  enforceAccess()
 })
+
+watch(
+  () => route.path,
+  () => {
+    enforceAccess()
+  },
+)
 
 const unreadBadge = computed(() => {
   const n = shellUnreadCount.value
@@ -32,7 +62,7 @@ const unreadBadge = computed(() => {
 </script>
 
 <template>
-  <nav v-if="show" class="mw-game-shell" aria-label="游戏导航">
+  <nav v-if="showTabs && checked" class="mw-game-shell" aria-label="游戏导航">
     <a
       href="/miraworld/play/city.html"
       class="mw-tab"
@@ -90,10 +120,14 @@ const unreadBadge = computed(() => {
   justify-content: center;
   min-height: 48px;
   padding: 0.5rem 0.35rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--vp-c-text-2);
   text-decoration: none;
   border-radius: 8px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 

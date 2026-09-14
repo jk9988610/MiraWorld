@@ -100,3 +100,32 @@ body {
   border-left-color: var(--vp-c-brand-1);
   background: var(--vp-c-bg-soft);
 }
+
+/* 游戏页：菜单行常显，并容纳 HUD */
+html.mw-play-hud .VPLocalNav {
+  display: flex !important;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+html.mw-play-hud .VPLocalNav .menu {
+  flex-shrink: 0;
+  order: 1;
+}
+
+html.mw-play-hud .VPLocalNav .mw-local-hud {
+  order: 2;
+  flex: 1;
+  min-width: 0;
+}
+
+html.mw-play-hud .VPLocalNav .VPLocalNavOutlineDropdown {
+  display: none;
+  order: 3;
+}
+
+html.mw-play-hud .VPLocalNav .top-link {
+  flex-shrink: 0;
+  order: 4;
+  margin-left: 0;
+}

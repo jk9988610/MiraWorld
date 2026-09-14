@@ -2,7 +2,8 @@
 import DefaultTheme from 'vitepress/theme'
 import UserNav from './components/UserNav.vue'
 import GameShell from './components/GameShell.vue'
-import WorldStatusBar from './components/WorldStatusBar.vue'
+import PlayLocalHud from './components/PlayLocalHud.vue'
+import PlayMenuExtras from './components/PlayMenuExtras.vue'
 
 const Layout = DefaultTheme.Layout
 </script>
@@ -12,8 +13,14 @@ const Layout = DefaultTheme.Layout
     <template #nav-bar-content-after>
       <UserNav />
     </template>
+    <template #sidebar-nav-after>
+      <PlayMenuExtras />
+    </template>
+    <template #nav-screen-content-after>
+      <PlayMenuExtras />
+    </template>
     <template #layout-bottom>
-      <WorldStatusBar />
+      <PlayLocalHud />
       <GameShell />
     </template>
   </Layout>

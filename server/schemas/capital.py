@@ -111,6 +111,7 @@ class ProductionInstitutionPublic(BaseModel):
     kind: str
     wallet_credits: int
     production_ready: bool
+    staffed: bool = False
 
 
 class ProductionStatusResponse(BaseModel):
@@ -119,6 +120,7 @@ class ProductionStatusResponse(BaseModel):
     company_wallet: int
     shop_open: bool
     institution: ProductionInstitutionPublic | None
+    staff: list[dict] = []
     hub: dict | None
     inventory: list[dict]
     production_lines: list[dict]

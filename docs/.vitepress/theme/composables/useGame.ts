@@ -244,7 +244,15 @@ export interface ProductionStatus {
     kind: string
     wallet_credits: number
     production_ready: boolean
+    staffed: boolean
   } | null
+  staff: Array<{
+    job_type: string
+    job_display: string
+    headcount: number
+    wage_per_capita: number
+    employed_groups: number
+  }>
   hub: {
     city: string
     resources: Array<{
@@ -778,6 +786,14 @@ export function useGame() {
     return parseJson<{ ok: boolean }>(res)
   }
 
+  async function worldExit() {
+    const res = await fetch(`${API_BASE}/world/exit`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return parseJson<{ ok: boolean }>(res)
+  }
+
   async function loadWorldClock() {
     const res = await fetch(`${API_BASE}/world/clock`, { credentials: 'include' })
     return parseJson<WorldClock>(res)
@@ -872,6 +888,7 @@ export function useGame() {
     worldContinue,
     worldLoad,
     worldAutosave,
+    worldExit,
     loadWorldClock,
     setWorldSpeed,
     loadSoloStatus,

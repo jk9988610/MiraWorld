@@ -7,7 +7,12 @@ import uuid
 from config_loader import items, l1_recipes
 from db import db, utc_now
 from fastapi import HTTPException
-from services.capital.institution import ensure_player_shop_institution, institution_id_for_player
+from services.capital.institution import (
+    ensure_institution_staff,
+    ensure_player_shop_institution,
+    institution_id_for_player,
+)
+from services.world_session.solo_world import active_world_id
 from services.economy.production import get_institution_inventory
 from services.l0.hub import get_hub_status
 
@@ -102,22 +107,36 @@ def get_production_status(player_id: int) -> dict:
             """,
             (player_id,),
         ).fetchone()
-        inst = _player_institution(conn, player_id)
-        if inst is None and shop:
+        world_id = active_world_id(conn, player_id)
+        if shop:
             ensure_player_shop_institution(
                 conn,
                 player_id=player_id,
                 display_name=shop["display_name"],
                 city=shop["city"],
                 company_id=shop["company_id"],
+                world_id=world_id,
             )
-            inst = _player_institution(conn, player_id)
+        inst = _player_institution(conn, player_id)
 
-        hub = get_hub_status(conn, shop["city"] if shop else "潮灯市") if shop else None
+        hub = (
+            get_hub_status(conn, shop["city"] if shop else "潮灯市", world_id)
+            if shop
+            else None
+        )
         inventory: dict[str, int] = {}
         lines: list[dict] = []
         offers: list[dict] = []
+        slots: list[dict] = []
         if inst:
+            if inst["kind"] in ("device_plant",):
+                slots = ensure_institution_staff(
+                    conn,
+                    institution_id=inst["id"],
+                    kind=inst["kind"],
+                    city=inst["city"],
+                    world_id=world_id,
+                )
             inventory = get_institution_inventory(conn, inst["id"])
             lines = _parse_lines(inst["production_lines_json"])
             offer_rows = conn.execute(
@@ -154,10 +173,12 @@ def get_production_status(player_id: int) -> dict:
                 "kind": inst["kind"],
                 "wallet_credits": int(inst["wallet_credits"]),
                 "production_ready": inst["kind"] == "device_plant",
+                "staffed": len(slots) > 0,
             }
             if inst
             else None
         ),
+        "staff": slots,
         "hub": hub,
         "inventory": [
             {"item_id": k, "display": _item_display(k), "qty": v}
@@ -172,21 +193,30 @@ def get_production_status(player_id: int) -> dict:
 def setup_device_plant(player_id: int) -> dict:
     with db() as conn:
         shop, _company = _require_shop_and_company(conn, player_id)
+        world_id = active_world_id(conn, player_id)
         inst_id = ensure_player_shop_institution(
             conn,
             player_id=player_id,
             display_name=shop["display_name"],
             city=shop["city"],
             company_id=shop["company_id"],
+            world_id=world_id,
         )
         lines_json = json.dumps(DEFAULT_LINES, ensure_ascii=False)
         conn.execute(
             """
             UPDATE institutions
-            SET kind = 'device_plant', production_lines_json = ?
+            SET kind = 'device_plant', production_lines_json = ?, world_id = ?
             WHERE id = ?
             """,
-            (lines_json, inst_id),
+            (lines_json, world_id, inst_id),
+        )
+        ensure_institution_staff(
+            conn,
+            institution_id=inst_id,
+            kind="device_plant",
+            city=shop["city"],
+            world_id=world_id,
         )
     return get_production_status(player_id)
 
@@ -232,6 +262,7 @@ def transfer_to_institution(player_id: int, source: str, amount: int) -> dict:
                 display_name=shop["display_name"],
                 city=shop["city"],
                 company_id=shop["company_id"],
+                world_id=active_world_id(conn, player_id),
             )
         else:
             inst_id = inst["id"]

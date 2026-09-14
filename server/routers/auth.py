@@ -4,9 +4,8 @@ from fastapi import APIRouter, Depends, Response
 
 from auth_util import (
     clear_session_cookie,
-    create_token,
     hash_password,
-    set_session_cookie,
+    issue_session_cookie,
     verify_password,
 )
 from deps import get_current_player
@@ -25,14 +24,14 @@ def register(body: RegisterBody, response: Response) -> PlayerPublic:
         hash_password,
         body.email,
     )
-    set_session_cookie(response, create_token(player.id, player.handle))
+    issue_session_cookie(response, player.id, player.handle, body.remember)
     return player
 
 
 @router.post("/login", response_model=PlayerPublic)
 def login(body: LoginBody, response: Response) -> PlayerPublic:
     player = login_player(body.handle, body.password, verify_password)
-    set_session_cookie(response, create_token(player.id, player.handle))
+    issue_session_cookie(response, player.id, player.handle, body.remember)
     return player
 
 

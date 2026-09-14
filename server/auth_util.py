@@ -22,8 +22,9 @@ def verify_password(password: str, password_hash: bytes) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash)
 
 
-def create_token(user_id: int, handle: str) -> str:
-    exp = datetime.now(UTC) + timedelta(hours=JWT_EXP_HOURS)
+def create_token(user_id: int, handle: str, *, hours: int | None = None) -> str:
+    exp_hours = hours if hours is not None else JWT_EXP_HOURS
+    exp = datetime.now(UTC) + timedelta(hours=exp_hours)
     return jwt.encode(
         {"sub": str(user_id), "handle": handle, "exp": exp},
         JWT_SECRET,
@@ -31,15 +32,32 @@ def create_token(user_id: int, handle: str) -> str:
     )
 
 
-def set_session_cookie(response: Response, token: str) -> None:
+def set_session_cookie(
+    response: Response,
+    token: str,
+    *,
+    max_age_seconds: int | None = None,
+) -> None:
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
         samesite="lax",
         path=COOKIE_PATH,
-        max_age=JWT_EXP_HOURS * 3600,
+        max_age=max_age_seconds if max_age_seconds is not None else JWT_EXP_HOURS * 3600,
         secure=os.environ.get("MIRAWORLD_COOKIE_SECURE", "").lower() == "true",
+    )
+
+
+REMEMBER_HOURS = int(os.environ.get("MIRAWORLD_JWT_REMEMBER_HOURS", str(30 * 24)))
+
+
+def issue_session_cookie(response: Response, user_id: int, handle: str, remember: bool = False) -> None:
+    hours = REMEMBER_HOURS if remember else JWT_EXP_HOURS
+    set_session_cookie(
+        response,
+        create_token(user_id, handle, hours=hours),
+        max_age_seconds=hours * 3600,
     )
 
 

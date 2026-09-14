@@ -100,6 +100,13 @@ def run_institution_production(
     for inst in institutions:
         kind = inst["kind"]
         lines = _get_lines(conn, inst["id"])
+        staff = conn.execute(
+            "SELECT 1 FROM institution_slots WHERE institution_id = ? LIMIT 1",
+            (inst["id"],),
+        ).fetchone()
+        if staff is None:
+            skipped += 1
+            continue
         for line in lines:
             if not line.get("enabled", True):
                 continue
